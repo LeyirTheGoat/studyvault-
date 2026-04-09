@@ -564,6 +564,24 @@ mark.hl { background: rgba(245,166,35,0.3); color: var(--text); border-radius: 2
 /* ===================== UTILS ===================== */
 .hidden { display: none !important; }
 #import-file, #mat-file-input, #subj-mat-file-input, #bulk-file-input { display: none; }
+/* AI Provider Toggle */
+.ai-provider-toggle { display:flex; gap:3px; }
+.prov-btn {
+  padding:4px 10px; background:var(--card); border:1px solid var(--border);
+  border-radius:var(--radius-sm); color:var(--text-muted); font-family:'DM Sans',sans-serif;
+  font-size:0.72rem; cursor:pointer; transition:var(--t);
+}
+.prov-btn:hover { background:var(--card-hover); color:var(--text); }
+.prov-btn.active { background:var(--accent-dim); border-color:rgba(245,166,35,0.4); color:var(--accent); font-weight:600; }
+/* OR quota box */
+.or-quota-box {
+  margin-top:10px; padding:10px 14px;
+  background:var(--card); border:1px solid var(--border);
+  border-radius:var(--radius-sm); font-size:0.77rem; color:var(--text-soft); line-height:1.8;
+}
+.or-quota-box .qrow { display:flex; justify-content:space-between; }
+.or-quota-box .qrow strong { color:var(--text); }
+.or-quota-box .qlabel { color:var(--text-muted); }
 @media (max-width: 680px) {
   #sidebar { display: none; }
   .stats-row { grid-template-columns: repeat(2,1fr); }
@@ -819,12 +837,38 @@ mark.hl { background: rgba(245,166,35,0.3); color: var(--text); border-radius: 2
         <div class="ai-topbar">
           <div class="ai-model-row">
             <span style="font-size:0.8rem;font-weight:600">🤖 AI Assistant</span>
+            <label>Provider:</label>
+            <div class="ai-provider-toggle">
+              <button id="btn-prov-gemini" class="prov-btn active" onclick="switchProvider('gemini')">🔷 Gemini</button>
+              <button id="btn-prov-or" class="prov-btn" onclick="switchProvider('openrouter')">🌐 OpenRouter</button>
+            </div>
             <label>Model:</label>
+            <!-- Gemini model select -->
             <select id="ai-model-select" onchange="settings.aiModel=this.value;saveSettings()">
               <option value="gemini-3.1-pro-preview">Gemini 3.1 Pro (Smartest)</option>
               <option value="gemini-3-flash" selected>Gemini 3 Flash (Balanced)</option>
               <option value="gemini-3.1-flash-lite-preview">Gemini 3.1 Flash Lite (Fastest)</option>
               <option value="gemini-2.5-flash">Gemini 2.5 Flash (Stable)</option>
+            </select>
+            <!-- OpenRouter model select (hidden by default) -->
+            <select id="or-model-select" class="hidden" onchange="settings.orModel=this.value;saveSettings()">
+              <optgroup label="🆓 Free Models">
+                <option value="meta-llama/llama-3.3-70b-instruct:free">Llama 3.3 70B (Free) ⭐</option>
+                <option value="google/gemini-2.0-flash-exp:free">Gemini 2.0 Flash Exp (Free)</option>
+                <option value="deepseek/deepseek-r1:free">DeepSeek R1 (Free)</option>
+                <option value="deepseek/deepseek-chat-v3-0324:free">DeepSeek V3 (Free)</option>
+                <option value="meta-llama/llama-3.1-8b-instruct:free">Llama 3.1 8B (Free, Fastest)</option>
+                <option value="mistralai/mistral-7b-instruct:free">Mistral 7B (Free)</option>
+                <option value="qwen/qwen3-8b:free">Qwen 3 8B (Free)</option>
+                <option value="microsoft/phi-4-reasoning:free">Phi-4 Reasoning (Free)</option>
+                <option value="openrouter/free">Auto Free Router</option>
+              </optgroup>
+              <optgroup label="💳 Paid Models">
+                <option value="google/gemini-2.5-flash">Gemini 2.5 Flash</option>
+                <option value="anthropic/claude-sonnet-4-5">Claude Sonnet 4.5</option>
+                <option value="openai/gpt-4o-mini">GPT-4o Mini</option>
+                <option value="openai/gpt-4o">GPT-4o</option>
+              </optgroup>
             </select>
             <button class="btn-sec" style="font-size:0.72rem;padding:4px 9px" onclick="clearAIChat()">Clear chat</button>
           </div>
@@ -852,7 +896,7 @@ mark.hl { background: rgba(245,166,35,0.3); color: var(--text); border-radius: 2
         </div>
         <div id="ai-no-key" class="ai-no-key hidden">
           <div class="ai-nk-icon">🔑</div>
-          <p>No Gemini API key configured. Add your API keys in Settings (⚙️) to use AI features.</p>
+          <p id="ai-no-key-msg">No API key configured. Add your API keys in Settings (⚙️) to use AI features.</p>
           <button class="btn-primary" onclick="openSettings()">Open Settings</button>
         </div>
         <div class="ai-input-area" id="ai-input-area">
@@ -883,7 +927,7 @@ mark.hl { background: rgba(245,166,35,0.3); color: var(--text); border-radius: 2
     <h3>⚙️ Settings</h3>
 
     <div class="settings-section">
-      <div class="settings-section-title">🔑 Gemini API Keys</div>
+      <div class="settings-section-title">🔷 Gemini API Keys</div>
       <div id="api-key-list" class="api-key-list"></div>
       <div class="key-add-row">
         <input type="password" id="new-api-key" placeholder="Paste your Gemini API key here (AIzaSy…)" autocomplete="off">
@@ -897,13 +941,59 @@ mark.hl { background: rgba(245,166,35,0.3); color: var(--text); border-radius: 2
     <hr class="m-divider">
 
     <div class="settings-section">
-      <div class="settings-section-title">🤖 AI Default Model</div>
+      <div class="settings-section-title">🌐 OpenRouter API Keys</div>
+      <div id="or-key-list" class="api-key-list"></div>
+      <div class="key-add-row">
+        <input type="password" id="new-or-key" placeholder="Paste your OpenRouter API key (sk-or-v1-…)" autocomplete="off">
+        <button class="btn-primary" onclick="addORKey()">Add Key</button>
+      </div>
+      <div style="font-size:0.71rem;color:var(--text-muted);margin-top:7px">
+        Get free key tại <a href="https://openrouter.ai/keys" target="_blank" style="color:var(--accent)">openrouter.ai/keys</a> — Free: 50 req/day (hoặc 1000 req/day nếu nạp ≥$10 credits)
+      </div>
+      <div id="or-quota-info" class="or-quota-box hidden"></div>
+      <button class="btn-sec" style="font-size:0.72rem;padding:5px 10px;margin-top:8px" onclick="fetchORQuota()">🔍 Check Credits &amp; Rate Limits</button>
+    </div>
+
+    <hr class="m-divider">
+
+    <div class="settings-section">
+      <div class="settings-section-title">🤖 AI Default Provider &amp; Model</div>
       <div class="m-field">
+        <label>Provider</label>
+        <div style="display:flex;gap:8px">
+          <button id="set-prov-gemini" class="prov-btn active" onclick="switchProvider('gemini')">🔷 Gemini</button>
+          <button id="set-prov-or" class="prov-btn" onclick="switchProvider('openrouter')">🌐 OpenRouter</button>
+        </div>
+      </div>
+      <div class="m-field" id="settings-gemini-model-row">
+        <label>Gemini Model</label>
         <select id="settings-model" onchange="settings.aiModel=this.value;saveSettings();document.getElementById('ai-model-select').value=this.value">
           <option value="gemini-3.1-pro-preview">Gemini 3.1 Pro Preview — Most powerful</option>
           <option value="gemini-3-flash">Gemini 3 Flash — Best balance ★ Recommended</option>
           <option value="gemini-3.1-flash-lite-preview">Gemini 3.1 Flash Lite — Fastest, lowest cost</option>
           <option value="gemini-2.5-flash">Gemini 2.5 Flash — Stable version</option>
+        </select>
+      </div>
+      <div class="m-field hidden" id="settings-or-model-row">
+        <label>OpenRouter Model</label>
+        <select id="settings-or-model" onchange="settings.orModel=this.value;saveSettings();document.getElementById('or-model-select').value=this.value">
+          <optgroup label="🆓 Free Models">
+            <option value="meta-llama/llama-3.3-70b-instruct:free">Llama 3.3 70B (Free) ⭐</option>
+            <option value="google/gemini-2.0-flash-exp:free">Gemini 2.0 Flash Exp (Free)</option>
+            <option value="deepseek/deepseek-r1:free">DeepSeek R1 (Free)</option>
+            <option value="deepseek/deepseek-chat-v3-0324:free">DeepSeek V3 (Free)</option>
+            <option value="meta-llama/llama-3.1-8b-instruct:free">Llama 3.1 8B (Free, Fastest)</option>
+            <option value="mistralai/mistral-7b-instruct:free">Mistral 7B (Free)</option>
+            <option value="qwen/qwen3-8b:free">Qwen 3 8B (Free)</option>
+            <option value="microsoft/phi-4-reasoning:free">Phi-4 Reasoning (Free)</option>
+            <option value="openrouter/free">Auto Free Router</option>
+          </optgroup>
+          <optgroup label="💳 Paid Models">
+            <option value="google/gemini-2.5-flash">Gemini 2.5 Flash</option>
+            <option value="anthropic/claude-sonnet-4-5">Claude Sonnet 4.5</option>
+            <option value="openai/gpt-4o-mini">GPT-4o Mini</option>
+            <option value="openai/gpt-4o">GPT-4o</option>
+          </optgroup>
         </select>
       </div>
     </div>
@@ -1047,7 +1137,7 @@ const ICONS  = ['📚','💻','🔬','📐','🌍','⚗️','🧠','📖','🎨'
 
 /* ───── State ───── */
 let db = { years: [] };
-let settings = { apiKeys:[], aiModel:'gemini-3-flash', ttsLang:'vi-VN', ttsVoice:'', ttsRate:1 };
+let settings = { apiKeys:[], aiModel:'gemini-3-flash', ttsLang:'vi-VN', ttsVoice:'', ttsRate:1, orApiKeys:[], orModel:'meta-llama/llama-3.3-70b-instruct:free', aiProvider:'gemini' };
 let cur  = null;
 let curSubjMat = null; // { yId, sId, sjId }
 let tab  = 'notes';
@@ -1057,6 +1147,7 @@ let saveTimer = null;
 let mAction = null, mCtx = null;
 let aiMessages = [];
 let aiKeyIndex = 0;
+let orKeyIndex = 0;
 let bulkMode = null; // 'flashcards' | 'quiz'
 let bulkParsed = [];
 let pomTimer = null, pomSeconds = 25*60, pomRunning = false, pomMode = 'focus';
@@ -1507,6 +1598,8 @@ function insertImageFromUrl() {
 function onPaste(e) {
   const items=e.clipboardData?.items;
   if(!items) return;
+
+  // 1. Image paste (existing logic)
   for(const item of items) {
     if(item.type.startsWith('image/')) {
       e.preventDefault();
@@ -1530,6 +1623,70 @@ function onPaste(e) {
       reader.readAsDataURL(file);
       return;
     }
+  }
+
+  // 2. Table paste from HTML clipboard (Excel, Google Sheets, Word, web pages)
+  const htmlItem = Array.from(items).find(i=>i.type==='text/html');
+  if(htmlItem) {
+    htmlItem.getAsString(raw=>{
+      // Parse the clipboard HTML
+      const parser=new DOMParser();
+      const doc=parser.parseFromString(raw,'text/html');
+      const table=doc.querySelector('table');
+      if(!table) return; // no table → let browser handle default paste
+
+      e.preventDefault();
+
+      // Sanitize: build a clean <table> preserving structure, stripping inline noise
+      const cleanTable=document.createElement('table');
+      const rows=table.querySelectorAll('tr');
+      rows.forEach((srcRow,rowIdx)=>{
+        const tr=document.createElement('tr');
+        const cells=srcRow.querySelectorAll('td,th');
+        cells.forEach(srcCell=>{
+          const isHeader=srcCell.tagName==='TH'||(rowIdx===0&&table.querySelectorAll('thead tr').length>0);
+          const td=document.createElement(isHeader?'th':'td');
+          // Colspan / rowspan
+          if(srcCell.colSpan>1) td.colSpan=srcCell.colSpan;
+          if(srcCell.rowSpan>1) td.rowSpan=srcCell.rowSpan;
+          // Get text content (strip complex nested styles but keep text)
+          td.textContent=srcCell.innerText||srcCell.textContent||'';
+          tr.appendChild(td);
+        });
+        if(tr.children.length) cleanTable.appendChild(tr);
+      });
+
+      if(!cleanTable.rows.length) return;
+
+      // Insert into editor at caret position
+      const sel=window.getSelection();
+      if(!sel||!sel.rangeCount){ document.getElementById('editor').appendChild(cleanTable); onEdit(); return; }
+      const range=sel.getRangeAt(0);
+      range.deleteContents();
+
+      // Wrap in a paragraph before and after for easier editing
+      const before=document.createElement('p');
+      before.innerHTML='&nbsp;';
+      const after=document.createElement('p');
+      after.innerHTML='&nbsp;';
+
+      const frag=document.createDocumentFragment();
+      frag.appendChild(before);
+      frag.appendChild(cleanTable);
+      frag.appendChild(after);
+      range.insertNode(frag);
+
+      // Move caret to the paragraph after the table
+      const newRange=document.createRange();
+      newRange.setStart(after,0);
+      newRange.collapse(true);
+      sel.removeAllRanges();
+      sel.addRange(newRange);
+
+      onEdit();
+      toast('📋 Table pasted!','ok');
+    });
+    return;
   }
 }
 function resizeLastImage() {
@@ -2117,9 +2274,16 @@ function downloadBulkTemplate() {
    GEMINI AI
    ─────────────────────────────────────────────────────────── */
 function checkAIKey() {
-  const hasKey=settings.apiKeys&&settings.apiKeys.length>0;
+  const prov=settings.aiProvider||'gemini';
+  let hasKey=false;
+  if(prov==='gemini') hasKey=(settings.apiKeys||[]).length>0;
+  else hasKey=(settings.orApiKeys||[]).length>0;
   document.getElementById('ai-no-key').classList.toggle('hidden',hasKey);
   document.getElementById('ai-input-area').classList.toggle('hidden',!hasKey);
+  const msg=document.getElementById('ai-no-key-msg');
+  if(msg) msg.textContent=prov==='gemini'
+    ?'No Gemini API key configured. Add your API keys in Settings (⚙️).'
+    :'No OpenRouter API key configured. Add your API key in Settings (⚙️).';
 }
 function getNextApiKey() {
   const keys=settings.apiKeys||[];
@@ -2165,13 +2329,141 @@ async function callGeminiWithHistory(messages, systemPrompt='') {
   const data=await res.json();
   return data.candidates?.[0]?.content?.parts?.map(p=>p.text||'').join('')||'';
 }
+/* ───────────────────────────────────────────────────────────
+   OPENROUTER AI
+   ─────────────────────────────────────────────────────────── */
+function getNextORKey() {
+  const keys=settings.orApiKeys||[];
+  if(!keys.length) return null;
+  const key=keys[orKeyIndex%keys.length];
+  orKeyIndex++;
+  return key;
+}
+async function callOpenRouter(prompt, systemPrompt='') {
+  const key=getNextORKey();
+  if(!key) throw new Error('No OpenRouter API key');
+  const model=document.getElementById('or-model-select')?.value||settings.orModel||'meta-llama/llama-3.3-70b-instruct:free';
+  const messages=[];
+  if(systemPrompt) messages.push({role:'system',content:systemPrompt});
+  messages.push({role:'user',content:prompt});
+  const res=await fetch('https://openrouter.ai/api/v1/chat/completions',{
+    method:'POST',
+    headers:{'Content-Type':'application/json','Authorization':'Bearer '+key,'HTTP-Referer':'https://studyvault.app','X-Title':'StudyVault'},
+    body:JSON.stringify({model,messages,max_tokens:4096,temperature:0.7})
+  });
+  if(!res.ok){
+    const err=await res.json().catch(()=>({}));
+    throw new Error(err?.error?.message||`OpenRouter error ${res.status}`);
+  }
+  const data=await res.json();
+  return data.choices?.[0]?.message?.content||'';
+}
+async function callOpenRouterWithHistory(messages, systemPrompt='') {
+  const key=getNextORKey();
+  if(!key) throw new Error('No OpenRouter API key');
+  const model=document.getElementById('or-model-select')?.value||settings.orModel||'meta-llama/llama-3.3-70b-instruct:free';
+  const msgs=[];
+  if(systemPrompt) msgs.push({role:'system',content:systemPrompt});
+  msgs.push(...messages.map(m=>({role:m.role==='assistant'?'assistant':'user',content:m.content})));
+  const res=await fetch('https://openrouter.ai/api/v1/chat/completions',{
+    method:'POST',
+    headers:{'Content-Type':'application/json','Authorization':'Bearer '+key,'HTTP-Referer':'https://studyvault.app','X-Title':'StudyVault'},
+    body:JSON.stringify({model:model,messages:msgs,max_tokens:4096,temperature:0.7})
+  });
+  if(!res.ok){
+    const err=await res.json().catch(()=>({}));
+    throw new Error(err?.error?.message||`OpenRouter error ${res.status}`);
+  }
+  const data=await res.json();
+  return data.choices?.[0]?.message?.content||'';
+}
+async function fetchORQuota() {
+  const key=getNextORKey();
+  if(!key){ toast('No OpenRouter key added yet','err'); return; }
+  const box=document.getElementById('or-quota-info');
+  if(box){ box.innerHTML='<span style="color:var(--text-muted)">Loading…</span>'; box.classList.remove('hidden'); }
+  try {
+    const res=await fetch('https://openrouter.ai/api/v1/key',{headers:{'Authorization':'Bearer '+key}});
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    const json=await res.json();
+    const d=json.data||{};
+    const limit=d.limit!=null?'$'+Number(d.limit).toFixed(4):'Unlimited';
+    const remaining=d.limit_remaining!=null?'$'+Number(d.limit_remaining).toFixed(4):'Unlimited';
+    const usage=d.usage!=null?'$'+Number(d.usage).toFixed(4):'—';
+    const isFree=d.limit==null&&d.limit_remaining==null;
+    const resetInfo=d.limit_reset||'—';
+    box.innerHTML=`
+      <div class="qrow"><span class="qlabel">Key Label:</span><strong>${x(d.label||'(unnamed)')}</strong></div>
+      <div class="qrow"><span class="qlabel">Credit Limit:</span><strong>${limit}</strong></div>
+      <div class="qrow"><span class="qlabel">Credits Used:</span><strong>${usage}</strong></div>
+      <div class="qrow"><span class="qlabel">Credits Remaining:</span><strong style="color:var(--green)">${remaining}</strong></div>
+      <div class="qrow"><span class="qlabel">Limit Reset:</span><strong>${resetInfo}</strong></div>
+      <div style="margin-top:6px;padding-top:6px;border-top:1px solid var(--border);font-size:0.72rem;color:var(--text-muted)">
+        ⚡ Free models: <strong style="color:var(--accent)">20 req/min</strong> &amp; 
+        <strong style="color:var(--accent)">${isFree||Number(d.usage||0)<10?'50':'1000'} req/day</strong>
+        &nbsp;·&nbsp; Tip: Nạp ≥$10 để tăng lên 1000 req/day
+      </div>`;
+  } catch(e){
+    box.innerHTML=`<span style="color:var(--red)">Failed to fetch: ${e.message}</span>`;
+  }
+}
+function renderORKeyList() {
+  const list=document.getElementById('or-key-list');
+  if(!list) return;
+  if(!(settings.orApiKeys||[]).length){ list.innerHTML='<div style="font-size:0.78rem;color:var(--text-muted);padding:8px 0">No OpenRouter keys added yet.</div>'; return; }
+  list.innerHTML=settings.orApiKeys.map((k,i)=>`
+    <div class="api-key-item">
+      <div class="api-key-label">${k.substring(0,10)}••••••••${k.slice(-4)}</div>
+      ${i===0?'<span class="api-key-badge">Active</span>':''}
+      <button class="api-key-del" onclick="removeORKey(${i})" title="Remove">✕</button>
+    </div>`).join('');
+}
+function addORKey() {
+  const input=document.getElementById('new-or-key');
+  const key=(input.value||'').trim();
+  if(!key){ toast('Paste an OpenRouter API key first','err'); return; }
+  if(!settings.orApiKeys) settings.orApiKeys=[];
+  if(settings.orApiKeys.includes(key)){ toast('This key is already added','err'); return; }
+  settings.orApiKeys.push(key);
+  saveSettings(); renderORKeyList(); input.value='';
+  toast('OpenRouter key added! ✓','ok');
+  checkAIKey();
+}
+function removeORKey(i) {
+  settings.orApiKeys.splice(i,1);
+  saveSettings(); renderORKeyList(); checkAIKey();
+}
+function switchProvider(prov) {
+  settings.aiProvider=prov; saveSettings();
+  // Update AI panel buttons
+  ['gemini','openrouter'].forEach(p=>{
+    const b1=document.getElementById('btn-prov-'+p);
+    const b2=document.getElementById('set-prov-'+p.replace('openrouter','or'));
+    if(b1) b1.classList.toggle('active',p===prov);
+    if(b2) b2.classList.toggle('active',p===prov);
+  });
+  // Toggle model selects in AI panel
+  const gemSel=document.getElementById('ai-model-select');
+  const orSel=document.getElementById('or-model-select');
+  if(gemSel) gemSel.classList.toggle('hidden',prov!=='gemini');
+  if(orSel) orSel.classList.toggle('hidden',prov!=='openrouter');
+  // Toggle model rows in settings
+  const gemRow=document.getElementById('settings-gemini-model-row');
+  const orRow=document.getElementById('settings-or-model-row');
+  if(gemRow) gemRow.classList.toggle('hidden',prov!=='gemini');
+  if(orRow) orRow.classList.toggle('hidden',prov!=='openrouter');
+  checkAIKey();
+}
+
 function getChapterContext() {
   const ch=getCh();
   const notes=document.getElementById('editor')?.innerText?.trim()||'';
   return `Chapter: "${ch?.name||''}"\n\nNotes:\n${notes||'(no notes yet)'}\n\nFlashcards: ${(ch?.flashcards||[]).length}\nQuiz questions: ${(ch?.quiz||[]).length}`;
 }
 async function aiAction(type) {
-  if(!settings.apiKeys?.length){ openSettings(); return; }
+  const prov=settings.aiProvider||'gemini';
+  if(prov==='gemini'&&!settings.apiKeys?.length){ openSettings(); return; }
+  if(prov==='openrouter'&&!settings.orApiKeys?.length){ openSettings(); return; }
   const ctx=getChapterContext();
   let prompt='', systemPrompt='You are a helpful study assistant.';
   if(type==='summarize'){
@@ -2192,7 +2484,9 @@ async function aiAction(type) {
   }
   const thinkId=addAIThinking();
   try {
-    const resp=await callGemini(prompt,systemPrompt);
+    const resp = prov==='openrouter'
+      ? await callOpenRouter(prompt, systemPrompt)
+      : await callGemini(prompt, systemPrompt);
     removeAIThinking(thinkId);
     if(type==='flashcards'){
       try {
@@ -2218,13 +2512,15 @@ async function aiAction(type) {
     aiMessages.push({role:'assistant',content:resp});
   } catch(e){
     removeAIThinking(thinkId);
-    addAIMessage('assistant',`❌ Error: ${e.message}\n\nIf you see a 404 error, try a different model. If you see 429, your API key is rate limited — add more keys in Settings.`,null,false);
+    addAIMessage('assistant',`❌ Error: ${e.message}\n\nNếu thấy lỗi 429: rate limit — thử đổi model hoặc thêm key khác.\nNếu thấy lỗi 404: model không tồn tại — chọn model khác.`,null,false);
   }
 }
 async function sendAIMessage() {
   const input=document.getElementById('ai-input');
   const msg=input.value.trim(); if(!msg) return;
-  if(!settings.apiKeys?.length){ openSettings(); return; }
+  const prov=settings.aiProvider||'gemini';
+  if(prov==='gemini'&&!settings.apiKeys?.length){ openSettings(); return; }
+  if(prov==='openrouter'&&!settings.orApiKeys?.length){ openSettings(); return; }
   input.value=''; autoResizeAIInput(input);
   addAIMessage('user',msg);
   aiMessages.push({role:'user',content:msg});
@@ -2233,7 +2529,9 @@ async function sendAIMessage() {
   document.getElementById('ai-send-btn').disabled=true;
   const thinkId=addAIThinking();
   try {
-    const resp=await callGeminiWithHistory(aiMessages,systemPrompt);
+    const resp = prov==='openrouter'
+      ? await callOpenRouterWithHistory(aiMessages, systemPrompt)
+      : await callGeminiWithHistory(aiMessages, systemPrompt);
     removeAIThinking(thinkId);
     addAIMessage('assistant',resp,null,true);
     aiMessages.push({role:'assistant',content:resp});
@@ -2284,6 +2582,7 @@ function markdownToHTML(text) {
    ─────────────────────────────────────────────────────────── */
 function openSettings() {
   renderApiKeyList();
+  renderORKeyList();
   populateTTSVoices();
   applySettings();
   updateStorageInfo();
@@ -2294,10 +2593,28 @@ function bgCloseSettings(e) { if(e.target===document.getElementById('settings-ov
 function applySettings() {
   if(document.getElementById('settings-model')) document.getElementById('settings-model').value=settings.aiModel||'gemini-3-flash';
   if(document.getElementById('ai-model-select')) document.getElementById('ai-model-select').value=settings.aiModel||'gemini-3-flash';
+  if(document.getElementById('or-model-select')) document.getElementById('or-model-select').value=settings.orModel||'meta-llama/llama-3.3-70b-instruct:free';
+  if(document.getElementById('settings-or-model')) document.getElementById('settings-or-model').value=settings.orModel||'meta-llama/llama-3.3-70b-instruct:free';
   if(document.getElementById('tts-lang-select')) document.getElementById('tts-lang-select').value=settings.ttsLang||'vi-VN';
   if(document.getElementById('tts-rate-slider')){ document.getElementById('tts-rate-slider').value=settings.ttsRate||1; document.getElementById('tts-rate-val').textContent=(settings.ttsRate||1)+'x'; }
   populateTTSVoices();
   if(settings.ttsVoice) setTimeout(()=>{ if(document.getElementById('tts-voice-select')) document.getElementById('tts-voice-select').value=settings.ttsVoice; },300);
+  // Apply provider UI state
+  const prov=settings.aiProvider||'gemini';
+  ['gemini','openrouter'].forEach(p=>{
+    const b1=document.getElementById('btn-prov-'+p);
+    const b2=document.getElementById('set-prov-'+(p==='openrouter'?'or':p));
+    if(b1) b1.classList.toggle('active',p===prov);
+    if(b2) b2.classList.toggle('active',p===prov);
+  });
+  const gemSel=document.getElementById('ai-model-select');
+  const orSel=document.getElementById('or-model-select');
+  if(gemSel) gemSel.classList.toggle('hidden',prov!=='gemini');
+  if(orSel) orSel.classList.toggle('hidden',prov!=='openrouter');
+  const gemRow=document.getElementById('settings-gemini-model-row');
+  const orRow=document.getElementById('settings-or-model-row');
+  if(gemRow) gemRow.classList.toggle('hidden',prov!=='gemini');
+  if(orRow) orRow.classList.toggle('hidden',prov!=='openrouter');
 }
 function renderApiKeyList() {
   const list=document.getElementById('api-key-list');
