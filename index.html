@@ -247,6 +247,51 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 .save-dot.saving { background: var(--accent); animation: pulse 0.8s infinite; }
 @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
 
+/* ===================== VISUALIZATION INNER TABS ===================== */
+.viz-inner-tabs { display: flex; gap: 0; border-bottom: 1px solid var(--border); margin-bottom: 20px; flex-shrink: 0; }
+.viz-inner-tab {
+  padding: 9px 18px; background: none; border: none; border-bottom: 2px solid transparent;
+  margin-bottom: -1px; color: var(--text-muted); font-family: 'DM Sans', sans-serif;
+  font-size: 0.82rem; font-weight: 500; cursor: pointer; transition: var(--t);
+}
+.viz-inner-tab:hover { color: var(--text); }
+.viz-inner-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+/* graph curve card */
+.graph-curve-card {
+  background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-sm);
+  padding: 10px 12px; display: flex; flex-direction: column; gap: 7px;
+}
+.graph-curve-header { display: flex; align-items: center; gap: 8px; }
+.graph-curve-swatch { width: 14px; height: 14px; border-radius: 3px; flex-shrink: 0; cursor: pointer; }
+.graph-curve-name { flex: 1; font-size: 0.8rem; font-weight: 600; color: var(--text-soft); }
+.graph-expr-input {
+  width: 100%; background: var(--surface); border: 1px solid var(--border);
+  border-radius: 4px; color: var(--text); font-family: 'DM Mono', monospace;
+  font-size: 0.81rem; padding: 6px 9px; outline: none; transition: var(--t);
+}
+.graph-expr-input:focus { border-color: var(--accent2); }
+.graph-expr-input.error { border-color: var(--red); }
+.graph-curve-meta { display: flex; align-items: center; gap: 8px; }
+.graph-curve-label-input {
+  flex: 1; background: var(--surface); border: 1px solid var(--border); border-radius: 4px;
+  color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 0.78rem;
+  padding: 4px 8px; outline: none;
+}
+.graph-curve-label-input:focus { border-color: var(--accent2); }
+.graph-style-select { background: var(--surface); border: 1px solid var(--border); border-radius: 4px; color: var(--text-soft); font-size: 0.76rem; padding: 4px 7px; outline: none; cursor: pointer; }
+/* annotation card */
+.graph-ann-card {
+  background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-sm);
+  padding: 8px 10px; display: grid; grid-template-columns: 1fr 50px 50px 24px; gap: 5px; align-items: center;
+}
+.graph-ann-input {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 4px;
+  color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 0.79rem;
+  padding: 4px 7px; outline: none; width: 100%;
+}
+.graph-ann-input:focus { border-color: var(--accent); }
+
 /* ===================== VISUALIZATION PANEL ===================== */
 .viz-panel { flex: 1; overflow-y: auto; padding: 28px 36px; display: flex; flex-direction: column; gap: 20px; }
 .viz-toolbar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 18px; }
@@ -966,74 +1011,192 @@ mark.hl { background: rgba(245,166,35,0.3); color: var(--text); border-radius: 2
 
       <!-- VISUALIZE PANEL -->
       <div id="pane-viz" class="hidden viz-panel">
-        <div class="panel-header">
-          <h3>📊 Visualizations</h3>
-          <div class="btn-row">
-            <button class="btn-sec" onclick="aiGenerateViz()">🤖 AI Generate Chart</button>
-            <button class="btn-sec" onclick="exportChart()">⬇ Export PNG</button>
-            <button class="btn-primary" onclick="renderVizChart()">▶ Render</button>
-          </div>
+        <!-- Inner mode tabs -->
+        <div class="viz-inner-tabs">
+          <button class="viz-inner-tab active" id="vitab-chart" onclick="switchVizMode('chart')">📊 Chart Builder</button>
+          <button class="viz-inner-tab" id="vitab-graph" onclick="switchVizMode('graph')">📈 Graph Plotter</button>
         </div>
-        <div class="viz-toolbar">
-          <label>Type:</label>
-          <select class="viz-select" id="viz-type" onchange="onVizTypeChange()">
-            <option value="bar">Bar Chart</option>
-            <option value="line">Line Chart</option>
-            <option value="pie">Pie Chart</option>
-            <option value="doughnut">Doughnut</option>
-            <option value="radar">Radar</option>
-            <option value="polarArea">Polar Area</option>
-          </select>
-          <div class="viz-sep"></div>
-          <label>Theme:</label>
-          <select class="viz-select" id="viz-theme" onchange="renderVizChart()">
-            <option value="default">Default</option>
-            <option value="warm">Warm</option>
-            <option value="cool">Cool</option>
-            <option value="mono">Mono</option>
-            <option value="pastel">Pastel</option>
-          </select>
-          <div class="viz-sep"></div>
-          <label>Title:</label>
-          <input class="viz-title-input" id="viz-title" placeholder="Chart title…" oninput="renderVizChart()" style="width:160px">
-        </div>
-        <div class="viz-layout">
-          <div class="viz-data-panel">
-            <div class="viz-series-hdr">
-              <h4>Data</h4>
-              <button class="btn-sec" style="font-size:0.72rem;padding:4px 9px" onclick="addVizRow()">＋ Row</button>
-            </div>
-            <table class="viz-data-table" id="viz-data-table">
-              <thead><tr><th id="viz-col-label">Label</th><th id="viz-col-value">Value</th><th style="width:24px"></th></tr></thead>
-              <tbody id="viz-data-body"></tbody>
-            </table>
-            <div style="margin-top:6px;display:flex;gap:6px">
-              <button class="btn-sec" style="font-size:0.72rem;padding:5px 10px;flex:1" onclick="addVizSeries()" id="viz-add-series-btn">＋ Add Series</button>
-              <button class="btn-sec" style="font-size:0.72rem;padding:5px 10px" onclick="clearVizData()">Clear</button>
-            </div>
-            <div id="viz-series-mgr" style="margin-top:10px;display:none">
-              <div class="viz-series-hdr" style="margin-bottom:6px"><h4>Series Colors</h4></div>
-              <div id="viz-series-list"></div>
-            </div>
-            <div style="margin-top:12px;border-top:1px solid var(--border);padding-top:12px">
-              <h4 style="margin-bottom:8px">Saved Charts</h4>
-              <div id="viz-saved-list" style="display:flex;flex-direction:column;gap:6px"></div>
-              <div id="viz-saved-empty" style="font-size:0.78rem;color:var(--text-muted);font-style:italic">No saved charts yet</div>
+
+        <!-- ══ CHART BUILDER ══ -->
+        <div id="vi-chart">
+          <div class="panel-header" style="margin-bottom:14px">
+            <div class="btn-row">
+              <button class="btn-sec" onclick="aiGenerateViz()">🤖 AI Generate</button>
+              <button class="btn-sec" onclick="exportChart()">⬇ PNG</button>
+              <button class="btn-primary" onclick="renderVizChart()">▶ Render</button>
             </div>
           </div>
-          <div class="viz-chart-panel" id="viz-chart-panel">
-            <div class="viz-chart-empty" id="viz-chart-empty">
-              <div>📊</div>
-              <div>Enter data and click <strong>Render</strong></div>
-              <div style="font-size:0.75rem;margin-top:6px;color:var(--text-muted)">Or let AI generate one from your notes</div>
+          <div class="viz-toolbar">
+            <label>Type:</label>
+            <select class="viz-select" id="viz-type" onchange="onVizTypeChange()">
+              <option value="bar">Bar</option>
+              <option value="line">Line</option>
+              <option value="pie">Pie</option>
+              <option value="doughnut">Doughnut</option>
+              <option value="radar">Radar</option>
+              <option value="polarArea">Polar Area</option>
+            </select>
+            <div class="viz-sep"></div>
+            <label>Theme:</label>
+            <select class="viz-select" id="viz-theme" onchange="renderVizChart()">
+              <option value="default">Default</option>
+              <option value="warm">Warm</option>
+              <option value="cool">Cool</option>
+              <option value="mono">Mono</option>
+              <option value="pastel">Pastel</option>
+            </select>
+            <div class="viz-sep"></div>
+            <label>Title:</label>
+            <input class="viz-title-input" id="viz-title" placeholder="Chart title…" oninput="renderVizChart()" style="width:150px">
+          </div>
+          <div class="viz-layout">
+            <div class="viz-data-panel">
+              <div class="viz-series-hdr">
+                <h4>Data</h4>
+                <button class="btn-sec" style="font-size:0.72rem;padding:4px 9px" onclick="addVizRow()">＋ Row</button>
+              </div>
+              <table class="viz-data-table" id="viz-data-table">
+                <thead><tr><th id="viz-col-label">Label</th><th id="viz-col-value">Value</th><th style="width:24px"></th></tr></thead>
+                <tbody id="viz-data-body"></tbody>
+              </table>
+              <div style="margin-top:6px;display:flex;gap:6px">
+                <button class="btn-sec" style="font-size:0.72rem;padding:5px 10px;flex:1" onclick="addVizSeries()" id="viz-add-series-btn">＋ Series</button>
+                <button class="btn-sec" style="font-size:0.72rem;padding:5px 10px" onclick="clearVizData()">Clear</button>
+              </div>
+              <div id="viz-series-mgr" style="margin-top:10px;display:none">
+                <div class="viz-series-hdr" style="margin-bottom:6px"><h4>Series Colors</h4></div>
+                <div id="viz-series-list"></div>
+              </div>
+              <div style="margin-top:12px;border-top:1px solid var(--border);padding-top:12px">
+                <h4 style="margin-bottom:8px">Saved</h4>
+                <div id="viz-saved-list" style="display:flex;flex-direction:column;gap:6px"></div>
+                <div id="viz-saved-empty" style="font-size:0.78rem;color:var(--text-muted);font-style:italic">No saved charts yet</div>
+              </div>
             </div>
-            <canvas id="viz-canvas" style="display:none"></canvas>
-            <div id="viz-chart-actions" style="margin-top:12px;display:none;gap:8px">
-              <button class="btn-sec" style="font-size:0.76rem" onclick="saveVizChart()">💾 Save Chart</button>
-              <button class="btn-sec" style="font-size:0.76rem" onclick="copyVizToNotes()">📝 Insert into Notes</button>
+            <div class="viz-chart-panel" id="viz-chart-panel">
+              <div class="viz-chart-empty" id="viz-chart-empty">
+                <div>📊</div>
+                <div>Enter data and click <strong>Render</strong></div>
+                <div style="font-size:0.75rem;margin-top:6px;color:var(--text-muted)">Or let AI generate one from your notes</div>
+              </div>
+              <canvas id="viz-canvas" style="display:none"></canvas>
+              <div id="viz-chart-actions" style="margin-top:12px;display:none;gap:8px">
+                <button class="btn-sec" style="font-size:0.76rem" onclick="saveVizChart()">💾 Save</button>
+                <button class="btn-sec" style="font-size:0.76rem" onclick="copyVizToNotes()">📝 Insert into Notes</button>
+              </div>
             </div>
           </div>
-        </div>
+        </div><!-- end vi-chart -->
+
+        <!-- ══ GRAPH PLOTTER ══ -->
+        <div id="vi-graph" style="display:none">
+          <div class="panel-header" style="margin-bottom:14px">
+            <div style="font-size:0.78rem;color:var(--text-muted);max-width:480px;line-height:1.5">
+              Plot math functions &amp; curves — supply/demand, cost curves, trig, parabolas, and more.
+            </div>
+            <div class="btn-row">
+              <button class="btn-sec" onclick="aiGenerateGraph()">🤖 AI Generate</button>
+              <button class="btn-sec" onclick="exportGraph()">⬇ PNG</button>
+              <button class="btn-sec" onclick="copyGraphToNotes()">📝 Into Notes</button>
+            </div>
+          </div>
+          <div class="viz-layout" style="min-height:480px">
+            <!-- Left controls -->
+            <div class="viz-data-panel" style="max-height:560px;overflow-y:auto;gap:14px">
+
+              <!-- Template -->
+              <div>
+                <h4>Template</h4>
+                <select class="viz-select" style="width:100%;margin-top:6px" onchange="applyGraphTemplate(this.value);this.value=''">
+                  <option value="">— choose a template —</option>
+                  <optgroup label="📐 Economics">
+                    <option value="supply-demand">Supply &amp; Demand</option>
+                    <option value="cost-curves">Cost Curves (ATC, AVC, MC)</option>
+                    <option value="ppf">Production Possibility Frontier</option>
+                    <option value="laffer">Laffer Curve</option>
+                  </optgroup>
+                  <optgroup label="📐 Math">
+                    <option value="quadratic">Quadratic (Parabola)</option>
+                    <option value="trig">Sine &amp; Cosine</option>
+                    <option value="exponential">Exponential Growth/Decay</option>
+                    <option value="linear">Linear Functions</option>
+                  </optgroup>
+                  <optgroup label="📐 Physics">
+                    <option value="velocity">Velocity vs Time</option>
+                    <option value="spring">Spring (Hooke's Law)</option>
+                  </optgroup>
+                </select>
+              </div>
+
+              <!-- Axis config -->
+              <div>
+                <h4>Axes</h4>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px">
+                  <div>
+                    <div style="font-size:0.7rem;color:var(--text-muted);margin-bottom:3px">X Label</div>
+                    <input class="viz-title-input" id="graph-xlabel" placeholder="x" style="width:100%" oninput="renderGraph()">
+                  </div>
+                  <div>
+                    <div style="font-size:0.7rem;color:var(--text-muted);margin-bottom:3px">Y Label</div>
+                    <input class="viz-title-input" id="graph-ylabel" placeholder="y" style="width:100%" oninput="renderGraph()">
+                  </div>
+                  <div>
+                    <div style="font-size:0.7rem;color:var(--text-muted);margin-bottom:3px">X min</div>
+                    <input class="viz-title-input" id="graph-xmin" value="0" type="number" style="width:100%" oninput="renderGraph()">
+                  </div>
+                  <div>
+                    <div style="font-size:0.7rem;color:var(--text-muted);margin-bottom:3px">X max</div>
+                    <input class="viz-title-input" id="graph-xmax" value="10" type="number" style="width:100%" oninput="renderGraph()">
+                  </div>
+                  <div>
+                    <div style="font-size:0.7rem;color:var(--text-muted);margin-bottom:3px">Y min</div>
+                    <input class="viz-title-input" id="graph-ymin" value="0" type="number" style="width:100%" oninput="renderGraph()">
+                  </div>
+                  <div>
+                    <div style="font-size:0.7rem;color:var(--text-muted);margin-bottom:3px">Y max</div>
+                    <input class="viz-title-input" id="graph-ymax" value="10" type="number" style="width:100%" oninput="renderGraph()">
+                  </div>
+                </div>
+                <div style="margin-top:8px">
+                  <div style="font-size:0.7rem;color:var(--text-muted);margin-bottom:3px">Graph Title</div>
+                  <input class="viz-title-input" id="graph-title" placeholder="Graph title…" style="width:100%" oninput="renderGraph()">
+                </div>
+              </div>
+
+              <!-- Curves -->
+              <div>
+                <div class="viz-series-hdr">
+                  <h4>Curves</h4>
+                  <button class="btn-sec" style="font-size:0.72rem;padding:4px 9px" onclick="addGraphCurve()">＋ Curve</button>
+                </div>
+                <div id="graph-curves-list" style="margin-top:8px;display:flex;flex-direction:column;gap:8px"></div>
+                <div style="margin-top:8px;padding:8px 10px;background:rgba(124,106,247,0.07);border:1px solid rgba(124,106,247,0.2);border-radius:var(--radius-sm);font-size:0.72rem;color:var(--text-muted);line-height:1.6">
+                  <strong style="color:var(--accent2)">Expression syntax:</strong><br>
+                  Use <code style="color:var(--accent)">x</code> as variable. Examples:<br>
+                  <code>-2*x + 12</code> · <code>x^2 - 4</code> · <code>sin(x)</code><br>
+                  <code>sqrt(x)</code> · <code>log(x)</code> · <code>e^x</code><br>
+                  <strong>Ops:</strong> + − * / ^ &nbsp; <strong>Fns:</strong> sin cos tan sqrt log abs
+                </div>
+              </div>
+
+              <!-- Annotations -->
+              <div>
+                <div class="viz-series-hdr">
+                  <h4>Labels &amp; Annotations</h4>
+                  <button class="btn-sec" style="font-size:0.72rem;padding:4px 9px" onclick="addGraphAnnotation()">＋ Label</button>
+                </div>
+                <div id="graph-annotations-list" style="margin-top:8px;display:flex;flex-direction:column;gap:6px"></div>
+              </div>
+
+            </div>
+
+            <!-- Graph canvas -->
+            <div class="viz-chart-panel" id="graph-canvas-wrap" style="padding:12px;align-items:stretch;justify-content:flex-start">
+              <canvas id="graph-canvas" style="width:100%;cursor:crosshair"></canvas>
+            </div>
+          </div>
+        </div><!-- end vi-graph -->
+
       </div><!-- end pane-viz -->
 
     </div>
@@ -1701,7 +1864,7 @@ function switchTab(t) {
   if(t==='quiz')      { renderQList(); endQuiz(); }
   if(t==='materials') { renderMatGrid(); }
   if(t==='ai')        { checkAIKey(); setTimeout(()=>document.getElementById('ai-input')?.focus(),80); }
-  if(t==='viz')       { initVizIfNeeded(); renderVizSavedList(); }
+  if(t==='viz')       { initVizIfNeeded(); renderVizSavedList(); if(vizMode==='graph'){ initGraphIfNeeded(); setTimeout(renderGraph,50); } }
 }
 
 /* ───── Editor Tools ───── */
@@ -3366,6 +3529,547 @@ ${ctx}`;
     else toast('Chart generated! ✓', 'ok');
   } catch (e) {
     toast('Could not generate chart: ' + e.message, 'err');
+  }
+}
+
+/* ───────────────────────────────────────────────────────────
+   VIZ MODE SWITCHER
+   ─────────────────────────────────────────────────────────── */
+let vizMode = 'chart'; // 'chart' | 'graph'
+function switchVizMode(mode) {
+  vizMode = mode;
+  document.getElementById('vitab-chart').classList.toggle('active', mode === 'chart');
+  document.getElementById('vitab-graph').classList.toggle('active', mode === 'graph');
+  document.getElementById('vi-chart').style.display = mode === 'chart' ? 'block' : 'none';
+  document.getElementById('vi-graph').style.display = mode === 'graph' ? 'block' : 'none';
+  if (mode === 'graph') { initGraphIfNeeded(); renderGraph(); }
+}
+
+/* ───────────────────────────────────────────────────────────
+   GRAPH PLOTTER ENGINE
+   ─────────────────────────────────────────────────────────── */
+let graphState = {
+  initialized: false,
+  curves: [],       // { id, expr, label, color, style, visible }
+  annotations: [],  // { id, text, x, y, color }
+};
+let graphCanvas = null, graphCtx = null;
+
+const GRAPH_COLORS = ['#e85d4a','#2196f3','#4caf7d','#f5a623','#7c6af7','#e91e8c','#00bcd4','#ff9800'];
+
+function gv(id) { return parseFloat(document.getElementById(id)?.value) || 0; }
+function gs(id) { return document.getElementById(id)?.value || ''; }
+
+function graphAxes() {
+  return {
+    xMin: gv('graph-xmin'), xMax: gv('graph-xmax'),
+    yMin: gv('graph-ymin'), yMax: gv('graph-ymax'),
+    xLabel: gs('graph-xlabel'), yLabel: gs('graph-ylabel'),
+    title: gs('graph-title')
+  };
+}
+
+function initGraphIfNeeded() {
+  if (graphState.initialized) return;
+  graphState.initialized = true;
+  graphCanvas = document.getElementById('graph-canvas');
+  graphCtx = graphCanvas.getContext('2d');
+  // Default blank state
+  document.getElementById('graph-xlabel').value = 'x';
+  document.getElementById('graph-ylabel').value = 'y';
+  document.getElementById('graph-xmin').value = '-5';
+  document.getElementById('graph-xmax').value = '5';
+  document.getElementById('graph-ymin').value = '-5';
+  document.getElementById('graph-ymax').value = '5';
+  renderGraphCurvesList();
+  renderGraphAnnotationsList();
+}
+
+// Safe expression evaluator
+function evalGraphExpr(expr, x) {
+  try {
+    const safe = expr
+      .replace(/\^/g, '**')
+      .replace(/\be\b/g, 'Math.E')
+      .replace(/\bpi\b/gi, 'Math.PI')
+      .replace(/\bsin\b/g, 'Math.sin')
+      .replace(/\bcos\b/g, 'Math.cos')
+      .replace(/\btan\b/g, 'Math.tan')
+      .replace(/\bsqrt\b/g, 'Math.sqrt')
+      .replace(/\babs\b/g, 'Math.abs')
+      .replace(/\blog\b/g, 'Math.log')
+      .replace(/\blog10\b/g, 'Math.log10')
+      .replace(/\bexp\b/g, 'Math.exp')
+      .replace(/\bfloor\b/g, 'Math.floor')
+      .replace(/\bceil\b/g, 'Math.ceil');
+    // eslint-disable-next-line no-new-func
+    return new Function('x', '"use strict"; return (' + safe + ');')(x);
+  } catch(e) { return NaN; }
+}
+
+function worldToCanvas(wx, wy, axes, W, H, pad) {
+  const cx = pad.l + (wx - axes.xMin) / (axes.xMax - axes.xMin) * (W - pad.l - pad.r);
+  const cy = pad.t + (axes.yMax - wy) / (axes.yMax - axes.yMin) * (H - pad.t - pad.b);
+  return [cx, cy];
+}
+
+function renderGraph() {
+  graphCanvas = document.getElementById('graph-canvas');
+  if (!graphCanvas) return;
+  graphCtx = graphCanvas.getContext('2d');
+  const wrap = document.getElementById('graph-canvas-wrap');
+  const W = wrap.clientWidth - 24;
+  const H = Math.max(380, Math.round(W * 0.65));
+  graphCanvas.width = W;
+  graphCanvas.height = H;
+
+  const axes = graphAxes();
+  const pad = { l: 58, r: 28, t: 40, b: 48 };
+  const ctx = graphCtx;
+
+  // Background
+  ctx.fillStyle = '#1a1917';
+  ctx.fillRect(0, 0, W, H);
+
+  // Grid
+  ctx.strokeStyle = '#2e2b27';
+  ctx.lineWidth = 1;
+  const xSteps = 10, ySteps = 8;
+  for (let i = 0; i <= xSteps; i++) {
+    const wx = axes.xMin + (axes.xMax - axes.xMin) * i / xSteps;
+    const [cx] = worldToCanvas(wx, 0, axes, W, H, pad);
+    ctx.beginPath(); ctx.moveTo(cx, pad.t); ctx.lineTo(cx, H - pad.b); ctx.stroke();
+  }
+  for (let i = 0; i <= ySteps; i++) {
+    const wy = axes.yMin + (axes.yMax - axes.yMin) * i / ySteps;
+    const [, cy] = worldToCanvas(0, wy, axes, W, H, pad);
+    ctx.beginPath(); ctx.moveTo(pad.l, cy); ctx.lineTo(W - pad.r, cy); ctx.stroke();
+  }
+
+  // Axes lines
+  ctx.strokeStyle = '#6b6560';
+  ctx.lineWidth = 1.5;
+  // X axis (y=0 if in range)
+  if (axes.yMin <= 0 && axes.yMax >= 0) {
+    const [, cy0] = worldToCanvas(0, 0, axes, W, H, pad);
+    ctx.beginPath(); ctx.moveTo(pad.l, cy0); ctx.lineTo(W - pad.r, cy0); ctx.stroke();
+  }
+  // Y axis (x=0 if in range)
+  if (axes.xMin <= 0 && axes.xMax >= 0) {
+    const [cx0] = worldToCanvas(0, 0, axes, W, H, pad);
+    ctx.beginPath(); ctx.moveTo(cx0, pad.t); ctx.lineTo(cx0, H - pad.b); ctx.stroke();
+  }
+  // Axis borders
+  ctx.strokeStyle = '#3d3b38';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(pad.l, pad.t, W - pad.l - pad.r, H - pad.t - pad.b);
+
+  // Tick labels
+  ctx.fillStyle = '#6b6560';
+  ctx.font = '11px DM Mono, monospace';
+  ctx.textAlign = 'center';
+  for (let i = 0; i <= xSteps; i++) {
+    const wx = axes.xMin + (axes.xMax - axes.xMin) * i / xSteps;
+    const [cx] = worldToCanvas(wx, 0, axes, W, H, pad);
+    const label = Number(wx.toPrecision(3)).toString();
+    ctx.fillText(label, cx, H - pad.b + 14);
+  }
+  ctx.textAlign = 'right';
+  for (let i = 0; i <= ySteps; i++) {
+    const wy = axes.yMin + (axes.yMax - axes.yMin) * i / ySteps;
+    const [, cy] = worldToCanvas(0, wy, axes, W, H, pad);
+    const label = Number(wy.toPrecision(3)).toString();
+    ctx.fillText(label, pad.l - 7, cy + 4);
+  }
+
+  // Axis labels
+  ctx.fillStyle = '#a39b93';
+  ctx.font = 'bold 12px DM Sans, sans-serif';
+  ctx.textAlign = 'center';
+  if (axes.xLabel) ctx.fillText(axes.xLabel, pad.l + (W - pad.l - pad.r) / 2, H - 8);
+  if (axes.yLabel) {
+    ctx.save();
+    ctx.translate(14, pad.t + (H - pad.t - pad.b) / 2);
+    ctx.rotate(-Math.PI / 2);
+    ctx.fillText(axes.yLabel, 0, 0);
+    ctx.restore();
+  }
+
+  // Title
+  if (axes.title) {
+    ctx.fillStyle = '#e8e3dc';
+    ctx.font = 'bold 14px Playfair Display, serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(axes.title, pad.l + (W - pad.l - pad.r) / 2, 22);
+  }
+
+  // Plot curves
+  const steps = (W - pad.l - pad.r) * 2;
+  graphState.curves.forEach(curve => {
+    if (!curve.visible || !curve.expr.trim()) return;
+    const col = curve.color || '#f5a623';
+    ctx.strokeStyle = col;
+    ctx.lineWidth = curve.style === 'dashed' ? 2 : curve.style === 'dotted' ? 2 : 2.5;
+    if (curve.style === 'dashed') ctx.setLineDash([8, 5]);
+    else if (curve.style === 'dotted') ctx.setLineDash([2, 5]);
+    else ctx.setLineDash([]);
+
+    ctx.beginPath();
+    let penDown = false;
+    let prevY = null;
+    for (let si = 0; si <= steps; si++) {
+      const wx = axes.xMin + (axes.xMax - axes.xMin) * si / steps;
+      const wy = evalGraphExpr(curve.expr, wx);
+      if (!isFinite(wy) || isNaN(wy)) { penDown = false; prevY = null; continue; }
+      // Discontinuity detection
+      if (prevY !== null && Math.abs(wy - prevY) > (axes.yMax - axes.yMin) * 0.6) {
+        penDown = false;
+      }
+      prevY = wy;
+      const [cx, cy] = worldToCanvas(wx, wy, axes, W, H, pad);
+      if (!penDown) { ctx.moveTo(cx, cy); penDown = true; }
+      else ctx.lineTo(cx, cy);
+    }
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Curve label at right end of visible range
+    if (curve.label) {
+      const wx = axes.xMax - (axes.xMax - axes.xMin) * 0.05;
+      const wy = evalGraphExpr(curve.expr, wx);
+      if (isFinite(wy) && wy >= axes.yMin && wy <= axes.yMax) {
+        const [lx, ly] = worldToCanvas(wx, wy, axes, W, H, pad);
+        ctx.fillStyle = col;
+        ctx.font = 'bold 12px DM Sans, sans-serif';
+        ctx.textAlign = 'left';
+        const bgW = ctx.measureText(curve.label).width + 10;
+        ctx.fillStyle = 'rgba(26,25,23,0.85)';
+        ctx.fillRect(lx - 2, ly - 14, bgW, 18);
+        ctx.fillStyle = col;
+        ctx.fillText(curve.label, lx + 3, ly);
+      }
+    }
+  });
+
+  // Annotations
+  graphState.annotations.forEach(ann => {
+    if (!ann.text) return;
+    const [cx, cy] = worldToCanvas(ann.x, ann.y, axes, W, H, pad);
+    if (cx < pad.l || cx > W - pad.r || cy < pad.t || cy > H - pad.b) return;
+    const col = ann.color || '#f5a623';
+    // dot
+    ctx.beginPath();
+    ctx.arc(cx, cy, 4, 0, Math.PI * 2);
+    ctx.fillStyle = col;
+    ctx.fill();
+    // label box
+    ctx.font = '12px DM Sans, sans-serif';
+    ctx.textAlign = 'left';
+    const tw = ctx.measureText(ann.text).width;
+    const lx = cx + 8, ly = cy - 6;
+    ctx.fillStyle = 'rgba(26,25,23,0.9)';
+    ctx.fillRect(lx - 3, ly - 13, tw + 10, 18);
+    ctx.strokeStyle = col; ctx.lineWidth = 1;
+    ctx.strokeRect(lx - 3, ly - 13, tw + 10, 18);
+    ctx.fillStyle = col;
+    ctx.fillText(ann.text, lx + 2, ly);
+  });
+}
+
+/* ── Curve management ── */
+function addGraphCurve(opts = {}) {
+  const id = uid();
+  const idx = graphState.curves.length;
+  graphState.curves.push({
+    id, visible: true,
+    expr: opts.expr || '',
+    label: opts.label || '',
+    color: opts.color || GRAPH_COLORS[idx % GRAPH_COLORS.length],
+    style: opts.style || 'solid'
+  });
+  renderGraphCurvesList();
+  renderGraph();
+}
+function removeGraphCurve(id) {
+  graphState.curves = graphState.curves.filter(c => c.id !== id);
+  renderGraphCurvesList(); renderGraph();
+}
+function renderGraphCurvesList() {
+  const el = document.getElementById('graph-curves-list');
+  if (!el) return;
+  if (!graphState.curves.length) {
+    el.innerHTML = `<div style="font-size:0.78rem;color:var(--text-muted);font-style:italic">No curves yet. Click + Curve.</div>`;
+    return;
+  }
+  el.innerHTML = graphState.curves.map(c => `
+    <div class="graph-curve-card" id="cc_${c.id}">
+      <div class="graph-curve-header">
+        <input type="color" class="graph-curve-swatch" value="${c.color}" oninput="onGraphCurveColor('${c.id}',this.value)" title="Color">
+        <span class="graph-curve-name">Curve</span>
+        <input type="checkbox" ${c.visible?'checked':''} onchange="onGraphCurveVisible('${c.id}',this.checked)" title="Visible" style="cursor:pointer">
+        <button class="nav-icon-btn" onclick="removeGraphCurve('${c.id}')" style="color:var(--red)">✕</button>
+      </div>
+      <div style="font-size:0.7rem;color:var(--text-muted);margin-bottom:2px">y = …expression…</div>
+      <input class="graph-expr-input" id="expr_${c.id}" placeholder="e.g. -2*x + 10" value="${x(c.expr)}"
+        oninput="onGraphCurveExpr('${c.id}',this.value)" onblur="renderGraph()">
+      <div class="graph-curve-meta">
+        <input class="graph-curve-label-input" placeholder="Curve label (optional)" value="${x(c.label)}"
+          oninput="onGraphCurveLabel('${c.id}',this.value)" onblur="renderGraph()">
+        <select class="graph-style-select" onchange="onGraphCurveStyle('${c.id}',this.value)">
+          <option value="solid" ${c.style==='solid'?'selected':''}>Solid</option>
+          <option value="dashed" ${c.style==='dashed'?'selected':''}>Dashed</option>
+          <option value="dotted" ${c.style==='dotted'?'selected':''}>Dotted</option>
+        </select>
+      </div>
+    </div>`).join('');
+}
+function onGraphCurveExpr(id, v) {
+  const c = graphState.curves.find(c => c.id === id);
+  if (c) { c.expr = v; }
+  const inp = document.getElementById('expr_' + id);
+  if (inp) {
+    const test = evalGraphExpr(v, 1);
+    inp.classList.toggle('error', v.trim() && !isFinite(test) && !isNaN(test));
+  }
+}
+function onGraphCurveLabel(id, v) { const c = graphState.curves.find(c=>c.id===id); if(c) c.label=v; }
+function onGraphCurveColor(id, v) { const c = graphState.curves.find(c=>c.id===id); if(c) c.color=v; renderGraph(); }
+function onGraphCurveVisible(id, v) { const c = graphState.curves.find(c=>c.id===id); if(c) c.visible=v; renderGraph(); }
+function onGraphCurveStyle(id, v) { const c = graphState.curves.find(c=>c.id===id); if(c) c.style=v; renderGraph(); }
+
+/* ── Annotation management ── */
+function addGraphAnnotation(opts = {}) {
+  const id = uid();
+  const axes = graphAxes();
+  graphState.annotations.push({
+    id,
+    text: opts.text || 'Label',
+    x: opts.x ?? ((axes.xMin + axes.xMax) / 2),
+    y: opts.y ?? ((axes.yMin + axes.yMax) / 2),
+    color: opts.color || '#f5a623'
+  });
+  renderGraphAnnotationsList(); renderGraph();
+}
+function removeGraphAnnotation(id) {
+  graphState.annotations = graphState.annotations.filter(a => a.id !== id);
+  renderGraphAnnotationsList(); renderGraph();
+}
+function renderGraphAnnotationsList() {
+  const el = document.getElementById('graph-annotations-list');
+  if (!el) return;
+  if (!graphState.annotations.length) {
+    el.innerHTML = `<div style="font-size:0.78rem;color:var(--text-muted);font-style:italic">No labels yet.</div>`;
+    return;
+  }
+  el.innerHTML = graphState.annotations.map(a => `
+    <div class="graph-ann-card">
+      <input class="graph-ann-input" value="${x(a.text)}" placeholder="Label text" oninput="onGraphAnnText('${a.id}',this.value)" onblur="renderGraph()">
+      <input class="graph-ann-input" type="number" value="${a.x}" placeholder="x" oninput="onGraphAnnX('${a.id}',this.value)" onblur="renderGraph()" style="text-align:center">
+      <input class="graph-ann-input" type="number" value="${a.y}" placeholder="y" oninput="onGraphAnnY('${a.id}',this.value)" onblur="renderGraph()" style="text-align:center">
+      <button class="nav-icon-btn" onclick="removeGraphAnnotation('${a.id}')" style="color:var(--red)">✕</button>
+    </div>`).join('');
+}
+function onGraphAnnText(id, v) { const a = graphState.annotations.find(a=>a.id===id); if(a) a.text=v; }
+function onGraphAnnX(id, v)    { const a = graphState.annotations.find(a=>a.id===id); if(a) a.x=parseFloat(v)||0; }
+function onGraphAnnY(id, v)    { const a = graphState.annotations.find(a=>a.id===id); if(a) a.y=parseFloat(v)||0; }
+
+/* ── Templates ── */
+function applyGraphTemplate(tpl) {
+  if (!tpl) return;
+  graphState.curves = [];
+  graphState.annotations = [];
+
+  const setAxes = (xmin,xmax,ymin,ymax,xl,yl,title) => {
+    document.getElementById('graph-xmin').value=xmin;
+    document.getElementById('graph-xmax').value=xmax;
+    document.getElementById('graph-ymin').value=ymin;
+    document.getElementById('graph-ymax').value=ymax;
+    document.getElementById('graph-xlabel').value=xl;
+    document.getElementById('graph-ylabel').value=yl;
+    document.getElementById('graph-title').value=title;
+  };
+
+  if (tpl === 'supply-demand') {
+    setAxes(0,10,0,10,'Quantity (Q)','Price (P)','Supply & Demand');
+    graphState.curves = [
+      { id:uid(), expr:'-1.5*x + 12', label:'Demand (D)', color:'#e85d4a', style:'solid', visible:true },
+      { id:uid(), expr:'x + 2',       label:'Supply (S)', color:'#4caf7d', style:'solid', visible:true }
+    ];
+    // Intersection: -1.5x+12 = x+2 → 10 = 2.5x → x=4, y=6
+    graphState.annotations = [
+      { id:uid(), text:'Equilibrium (Q*=4, P*=6)', x:4, y:6, color:'#f5a623' }
+    ];
+
+  } else if (tpl === 'cost-curves') {
+    setAxes(0,10,0,20,'Quantity (Q)','Cost ($)','Firm Cost Curves');
+    graphState.curves = [
+      { id:uid(), expr:'x^2/5 - 2*x + 8',            label:'ATC',  color:'#f5a623', style:'solid',  visible:true },
+      { id:uid(), expr:'x^2/5 - 2*x + 5',            label:'AVC',  color:'#7c6af7', style:'solid',  visible:true },
+      { id:uid(), expr:'2*x/5 - 2',                  label:'MC',   color:'#e85d4a', style:'solid',  visible:true },
+      { id:uid(), expr:'8',                           label:'AFC',  color:'#a39b93', style:'dashed', visible:true }
+    ];
+
+  } else if (tpl === 'ppf') {
+    setAxes(0,10,0,10,'Good X','Good Y','Production Possibility Frontier');
+    graphState.curves = [
+      { id:uid(), expr:'sqrt(100 - x^2)', label:'PPF', color:'#4caf7d', style:'solid', visible:true }
+    ];
+    graphState.annotations = [
+      { id:uid(), text:'Attainable', x:3, y:4, color:'#4caf7d' },
+      { id:uid(), text:'Unattainable', x:7, y:8, color:'#e85d4a' }
+    ];
+
+  } else if (tpl === 'laffer') {
+    setAxes(0,100,0,30,'Tax Rate (%)','Revenue','Laffer Curve');
+    graphState.curves = [
+      { id:uid(), expr:'-0.003*x^2 + 0.3*x', label:'Tax Revenue', color:'#f5a623', style:'solid', visible:true }
+    ];
+    graphState.annotations = [
+      { id:uid(), text:'Revenue max ~50%', x:50, y:7.5, color:'#f5a623' }
+    ];
+
+  } else if (tpl === 'quadratic') {
+    setAxes(-5,5,-3,12,'x','y','Quadratic Functions');
+    graphState.curves = [
+      { id:uid(), expr:'x^2',         label:'y = x²',      color:'#f5a623', style:'solid',  visible:true },
+      { id:uid(), expr:'x^2 - 2*x',   label:'y = x²−2x',   color:'#7c6af7', style:'solid',  visible:true },
+      { id:uid(), expr:'-x^2 + 4',    label:'y = −x²+4',   color:'#e85d4a', style:'dashed', visible:true }
+    ];
+
+  } else if (tpl === 'trig') {
+    setAxes(-7,7,-2,2,'x (radians)','y','Sine & Cosine');
+    graphState.curves = [
+      { id:uid(), expr:'sin(x)',      label:'sin(x)', color:'#f5a623', style:'solid',  visible:true },
+      { id:uid(), expr:'cos(x)',      label:'cos(x)', color:'#2196f3', style:'solid',  visible:true },
+      { id:uid(), expr:'sin(2*x)/2', label:'sin(2x)/2', color:'#4caf7d', style:'dashed', visible:true }
+    ];
+
+  } else if (tpl === 'exponential') {
+    setAxes(-3,4,-1,8,'x','y','Exponential Growth & Decay');
+    graphState.curves = [
+      { id:uid(), expr:'e^x',     label:'eˣ (growth)',  color:'#4caf7d', style:'solid',  visible:true },
+      { id:uid(), expr:'e^(-x)',  label:'e⁻ˣ (decay)',  color:'#e85d4a', style:'solid',  visible:true },
+      { id:uid(), expr:'2^x',     label:'2ˣ',           color:'#f5a623', style:'dashed', visible:true }
+    ];
+
+  } else if (tpl === 'linear') {
+    setAxes(-5,5,-8,8,'x','y','Linear Functions');
+    graphState.curves = [
+      { id:uid(), expr:'2*x + 1',    label:'y = 2x+1',  color:'#f5a623', style:'solid',  visible:true },
+      { id:uid(), expr:'-x + 3',     label:'y = −x+3',  color:'#e85d4a', style:'solid',  visible:true },
+      { id:uid(), expr:'0.5*x - 2',  label:'y = ½x−2',  color:'#2196f3', style:'dashed', visible:true }
+    ];
+
+  } else if (tpl === 'velocity') {
+    setAxes(0,10,0,20,'Time (s)','Velocity (m/s)','Velocity vs Time');
+    graphState.curves = [
+      { id:uid(), expr:'2*x',           label:'Constant accel.', color:'#4caf7d', style:'solid',  visible:true },
+      { id:uid(), expr:'-x^2/5 + 2*x', label:'Decelerating',    color:'#e85d4a', style:'solid',  visible:true },
+      { id:uid(), expr:'10',            label:'Constant v',      color:'#f5a623', style:'dashed', visible:true }
+    ];
+
+  } else if (tpl === 'spring') {
+    setAxes(0,10,0,50,'Extension (m)','Force (N)','Hooke\'s Law  F = kx');
+    graphState.curves = [
+      { id:uid(), expr:'5*x',   label:'F = 5x (k=5)', color:'#4caf7d', style:'solid',  visible:true },
+      { id:uid(), expr:'10*x',  label:'F = 10x (k=10)', color:'#7c6af7', style:'dashed', visible:true }
+    ];
+    graphState.annotations = [
+      { id:uid(), text:'Elastic limit', x:7, y:35, color:'#e85d4a' }
+    ];
+  }
+
+  renderGraphCurvesList();
+  renderGraphAnnotationsList();
+  renderGraph();
+  toast(`Template applied ✓`, 'ok');
+}
+
+/* ── Export / Copy ── */
+function exportGraph() {
+  const canvas = document.getElementById('graph-canvas');
+  if (!canvas || canvas.width === 0) { toast('Render a graph first!', 'err'); return; }
+  const link = document.createElement('a');
+  link.download = (gs('graph-title') || 'graph') + '.png';
+  link.href = canvas.toDataURL('image/png');
+  link.click();
+  toast('Graph exported ✓', 'ok');
+}
+function copyGraphToNotes() {
+  const canvas = document.getElementById('graph-canvas');
+  if (!canvas || canvas.width === 0) { toast('Render a graph first!', 'err'); return; }
+  const dataUrl = canvas.toDataURL('image/png');
+  const title = gs('graph-title') || 'Graph';
+  const editor = document.getElementById('editor');
+  if (!editor) return;
+  editor.focus();
+  document.execCommand('insertHTML', false,
+    `<p><img src="${dataUrl}" alt="${x(title)}" style="max-width:100%;border-radius:8px;margin:8px 0"></p><p><em>${x(title)}</em></p>`);
+  switchTab('notes');
+  toast('Graph inserted into notes ✓', 'ok');
+}
+
+/* ── AI Generate Graph ── */
+async function aiGenerateGraph() {
+  const prov = settings.aiProvider || 'gemini';
+  if (prov === 'gemini' && !settings.apiKeys?.length) { openSettings(); return; }
+  if (prov === 'openrouter' && !settings.orApiKeys?.length) { openSettings(); return; }
+  const ctx = getChapterContext();
+  const prompt = `Based on these chapter notes, suggest ONE useful mathematical/economic graph that illustrates a key concept.
+Return ONLY a JSON object — no markdown, no extra text:
+{
+  "title": "Graph Title",
+  "xLabel": "X axis label",
+  "yLabel": "Y axis label",
+  "xMin": number,
+  "xMax": number,
+  "yMin": number,
+  "yMax": number,
+  "curves": [
+    {"expr": "math expression using x", "label": "curve name", "color": "#hexcolor", "style": "solid|dashed|dotted"}
+  ],
+  "annotations": [
+    {"text": "label text", "x": number, "y": number}
+  ],
+  "explanation": "One sentence why this graph is useful"
+}
+Use valid math expressions: +, -, *, /, ^ for power, sin(), cos(), sqrt(), log(), abs(), e^x.
+Colors must be valid hex. Keep xMin/xMax/yMin/yMax appropriate for the curves.
+
+${ctx}`;
+
+  toast('🤖 AI is building the graph…', '');
+  try {
+    const resp = prov === 'openrouter'
+      ? await callOpenRouter(prompt, 'You are a math and economics visualization expert.')
+      : await callGemini(prompt, 'You are a math and economics visualization expert.');
+    const clean = resp.replace(/```json|```/g, '').trim();
+    const obj = JSON.parse(clean);
+
+    if (!obj.curves) throw new Error('No curves in response');
+    document.getElementById('graph-title').value = obj.title || 'AI Graph';
+    document.getElementById('graph-xlabel').value = obj.xLabel || 'x';
+    document.getElementById('graph-ylabel').value = obj.yLabel || 'y';
+    document.getElementById('graph-xmin').value = obj.xMin ?? 0;
+    document.getElementById('graph-xmax').value = obj.xMax ?? 10;
+    document.getElementById('graph-ymin').value = obj.yMin ?? 0;
+    document.getElementById('graph-ymax').value = obj.yMax ?? 10;
+    graphState.curves = obj.curves.map((c, i) => ({
+      id: uid(), visible: true,
+      expr: c.expr || '', label: c.label || '',
+      color: c.color || GRAPH_COLORS[i % GRAPH_COLORS.length],
+      style: c.style || 'solid'
+    }));
+    graphState.annotations = (obj.annotations || []).map(a => ({
+      id: uid(), text: a.text || '', x: a.x ?? 0, y: a.y ?? 0, color: '#f5a623'
+    }));
+    renderGraphCurvesList();
+    renderGraphAnnotationsList();
+    renderGraph();
+    if (obj.explanation) toast(`📈 ${obj.explanation}`, 'ok');
+    else toast('Graph generated! ✓', 'ok');
+  } catch (e) {
+    toast('Could not generate graph: ' + e.message, 'err');
   }
 }
 
