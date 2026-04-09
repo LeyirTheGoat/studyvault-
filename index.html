@@ -501,6 +501,63 @@ mark.hl { background: rgba(245,166,35,0.3); color: var(--text); border-radius: 2
 .toast.ok { border-color: var(--green); color: var(--green); }
 .toast.err { border-color: var(--red); color: var(--red); }
 
+/* ===================== TTS READING OVERLAY ===================== */
+#tts-overlay {
+  position: fixed; inset: 0; z-index: 900;
+  background: rgba(10,9,8,0.96);
+  display: flex; flex-direction: column;
+  animation: ttsOverlayIn 0.3s ease;
+}
+@keyframes ttsOverlayIn { from { opacity:0 } to { opacity:1 } }
+.tts-overlay-bar {
+  padding: 12px 28px; display: flex; align-items: center; gap: 14px;
+  border-bottom: 1px solid var(--border); background: var(--surface);
+  flex-shrink: 0;
+}
+.tts-overlay-title {
+  flex: 1; font-size: 0.82rem; color: var(--text-muted);
+  font-style: italic; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.tts-stop-btn {
+  padding: 6px 16px; background: rgba(232,93,74,0.12); border: 1px solid rgba(232,93,74,0.35);
+  border-radius: var(--radius-sm); color: var(--red); font-family: 'DM Sans',sans-serif;
+  font-size: 0.78rem; font-weight: 600; cursor: pointer; transition: var(--t);
+}
+.tts-stop-btn:hover { background: rgba(232,93,74,0.22); }
+.tts-pause-btn {
+  padding: 6px 14px; background: var(--accent-dim); border: 1px solid rgba(245,166,35,0.35);
+  border-radius: var(--radius-sm); color: var(--accent); font-family: 'DM Sans',sans-serif;
+  font-size: 0.78rem; font-weight: 600; cursor: pointer; transition: var(--t);
+}
+.tts-pause-btn:hover { background: rgba(245,166,35,0.22); }
+.tts-progress-bar {
+  height: 3px; background: var(--border); flex-shrink: 0;
+}
+.tts-progress-fill {
+  height: 100%; background: var(--accent); border-radius: 2px;
+  transition: width 0.3s ease; width: 0%;
+}
+.tts-overlay-content {
+  flex: 1; overflow-y: auto; padding: 56px 15%;
+  font-family: 'DM Sans', sans-serif; line-height: 2.4;
+  font-size: 1.15rem; color: rgba(232,227,220,0.12);
+  scroll-behavior: smooth;
+}
+.tts-word {
+  display: inline; border-radius: 4px; padding: 1px 2px;
+  transition: color 0.1s ease, background 0.1s ease;
+  cursor: default;
+}
+.tts-word.tts-lit {
+  color: #fff;
+  background: rgba(245,166,35,0.22);
+  box-shadow: 0 0 0 3px rgba(245,166,35,0.1);
+  border-radius: 5px;
+  text-shadow: 0 0 20px rgba(245,166,35,0.6);
+}
+.tts-word.tts-past { color: rgba(232,227,220,0.28); }
+.tts-br { display: block; height: 0.6em; }
+
 /* ===================== SUBJECT MATERIALS VIEW ===================== */
 #subj-mat-view { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
 
@@ -577,13 +634,20 @@ mark.hl { background: rgba(245,166,35,0.3); color: var(--text); border-radius: 2
     </div>
     <div style="flex:1;overflow-y:auto;padding:28px 36px">
       <div class="panel-header">
-        <h3>📚 Subject Materials</h3>
-        <button class="btn-primary" onclick="document.getElementById('subj-mat-file-input').click()">＋ Upload Material</button>
+        <h3>📖 Subject Material <span style="font-family:'DM Sans',sans-serif;font-size:0.78rem;font-weight:400;color:var(--text-muted)">(SGK / Sách giáo khoa)</span></h3>
+        <button class="btn-primary" onclick="document.getElementById('subj-mat-file-input').click()">＋ Upload SGK</button>
+      </div>
+      <div style="display:flex;align-items:flex-start;gap:10px;background:rgba(124,106,247,0.08);border:1px solid rgba(124,106,247,0.25);border-radius:var(--radius-sm);padding:11px 14px;margin-bottom:20px">
+        <span style="font-size:1rem;flex-shrink:0">📖</span>
+        <div>
+          <div style="font-size:0.8rem;font-weight:600;color:#a99df5;margin-bottom:2px">Tài liệu tự đọc — AI không truy cập</div>
+          <div style="font-size:0.75rem;color:var(--text-muted);line-height:1.5">Đây là nơi lưu <strong style="color:var(--text-soft)">sách giáo khoa (SGK)</strong> để học sinh tự tham khảo. AI sẽ <em>không</em> đọc các file này — chỉ có <strong style="color:var(--text-soft)">Chapter Material (slide của thầy cô)</strong> mới được AI sử dụng để hỗ trợ học tập.</div>
+        </div>
       </div>
       <input type="file" id="subj-mat-file-input" multiple accept=".pdf,.ppt,.pptx,.doc,.docx,.png,.jpg,.jpeg,.gif,.mp4,.mp3,.zip,.txt" onchange="uploadSubjMaterial(event)">
       <div id="subj-mat-progress" class="hidden" style="margin-bottom:12px;font-size:0.8rem;color:var(--text-muted)">Uploading…</div>
       <div id="subj-mat-grid" class="mat-grid"></div>
-      <div id="subj-mat-empty" class="mat-empty">No materials yet. Upload textbooks, reference PDFs, or any study files.</div>
+      <div id="subj-mat-empty" class="mat-empty">Chưa có SGK nào. Upload file PDF sách giáo khoa để tự đọc và tham khảo.</div>
     </div>
   </div>
 
@@ -599,7 +663,7 @@ mark.hl { background: rgba(245,166,35,0.3); color: var(--text); border-radius: 2
       <button class="tab-btn active" id="tab-notes" onclick="switchTab('notes')">📝 Notes</button>
       <button class="tab-btn" id="tab-flashcards" onclick="switchTab('flashcards')">🃏 Flashcards <span class="badge" id="b-cards">0</span></button>
       <button class="tab-btn" id="tab-quiz" onclick="switchTab('quiz')">✏️ Quiz <span class="badge" id="b-quiz">0</span></button>
-      <button class="tab-btn" id="tab-materials" onclick="switchTab('materials')">📎 Materials <span class="badge" id="b-mats">0</span></button>
+      <button class="tab-btn" id="tab-materials" onclick="switchTab('materials')">📎 Chapter Material <span class="badge" id="b-mats">0</span></button>
       <button class="tab-btn" id="tab-ai" onclick="switchTab('ai')">🤖 AI</button>
     </div>
     <div class="ch-content">
@@ -719,8 +783,15 @@ mark.hl { background: rgba(245,166,35,0.3); color: var(--text); border-radius: 2
       <!-- MATERIALS -->
       <div id="pane-materials" class="hidden materials-panel">
         <div class="panel-header">
-          <h3>Chapter Materials</h3>
-          <button class="btn-primary" onclick="document.getElementById('mat-file-input').click()">＋ Upload File</button>
+          <h3>📎 Chapter Material <span style="font-family:'DM Sans',sans-serif;font-size:0.78rem;font-weight:400;color:var(--text-muted)">(Slide của thầy cô)</span></h3>
+          <button class="btn-primary" onclick="document.getElementById('mat-file-input').click()">＋ Upload Slide</button>
+        </div>
+        <div style="display:flex;align-items:flex-start;gap:10px;background:rgba(245,166,35,0.08);border:1px solid rgba(245,166,35,0.25);border-radius:var(--radius-sm);padding:11px 14px;margin-bottom:16px">
+          <span style="font-size:1rem;flex-shrink:0">🤖</span>
+          <div>
+            <div style="font-size:0.8rem;font-weight:600;color:var(--accent);margin-bottom:2px">AI có thể đọc các file này</div>
+            <div style="font-size:0.75rem;color:var(--text-muted);line-height:1.5">Upload <strong style="color:var(--text-soft)">slide PDF do thầy cô làm</strong> để AI hỗ trợ tóm tắt, tạo flashcard và quiz. SGK (sách giáo khoa) hãy upload vào <strong style="color:var(--text-soft)">Subject Material</strong> ở trang chủ môn học.</div>
+          </div>
         </div>
         <input type="file" id="mat-file-input" multiple accept="*/*" onchange="uploadMaterial(event)">
         <div id="mat-upload-progress" class="hidden mat-progress">
@@ -740,7 +811,7 @@ mark.hl { background: rgba(245,166,35,0.3); color: var(--text); border-radius: 2
           <div class="uz-sub">PDFs, slides, images, documents — any file type supported</div>
         </div>
         <div id="mat-grid" class="mat-grid"></div>
-        <div id="mat-empty" class="mat-empty">No materials uploaded yet. Add lecture slides, PDFs, or reference files for this chapter.</div>
+        <div id="mat-empty" class="mat-empty">Chưa có slide nào. Upload slide PDF của thầy cô để AI có thể hỗ trợ học tập.</div>
       </div>
 
       <!-- AI PANEL -->
@@ -770,6 +841,13 @@ mark.hl { background: rgba(245,166,35,0.3); color: var(--text); border-radius: 2
             <div style="font-size:2rem;margin-bottom:10px">🤖</div>
             <div style="font-size:0.87rem;margin-bottom:6px;font-weight:600;color:var(--text-soft)">AI Assistant ready</div>
             <div style="font-size:0.78rem">Ask me anything about this chapter, or use the quick actions above.</div>
+          </div>
+          <div style="margin:0 16px 12px;display:flex;gap:8px;align-items:flex-start;background:rgba(245,166,35,0.07);border:1px solid rgba(245,166,35,0.2);border-radius:var(--radius-sm);padding:10px 12px">
+            <span style="font-size:0.9rem;flex-shrink:0">ℹ️</span>
+            <div style="font-size:0.74rem;color:var(--text-muted);line-height:1.6">
+              AI chỉ đọc <strong style="color:var(--text-soft)">ghi chú</strong> và <strong style="color:var(--text-soft)">Chapter Material (slide của thầy cô)</strong> trong chapter này.<br>
+              <strong style="color:#a99df5">Subject Material (SGK)</strong> sẽ không được AI truy cập — dành để bạn tự đọc.
+            </div>
           </div>
         </div>
         <div id="ai-no-key" class="ai-no-key hidden">
@@ -942,6 +1020,18 @@ mark.hl { background: rgba(245,166,35,0.3); color: var(--text); border-radius: 2
       <div class="search-empty">Start typing to search across all your content…</div>
     </div>
   </div>
+</div>
+
+<!-- ==================== TTS READING OVERLAY ==================== -->
+<div id="tts-overlay" class="hidden">
+  <div class="tts-overlay-bar">
+    <span style="font-size:1.1rem">🔊</span>
+    <div class="tts-overlay-title" id="tts-overlay-title">Listening…</div>
+    <button class="tts-pause-btn" id="tts-pause-btn" onclick="toggleTTSPause()">⏸ Pause</button>
+    <button class="tts-stop-btn" onclick="stopTTS()">⏹ Stop</button>
+  </div>
+  <div class="tts-progress-bar"><div class="tts-progress-fill" id="tts-progress-fill"></div></div>
+  <div class="tts-overlay-content" id="tts-words-content"></div>
 </div>
 
 <!-- ==================== TOAST ==================== -->
@@ -1267,8 +1357,8 @@ function renderDash() {
         <div class="prog-bar"><div class="prog-fill" style="width:${Math.min(100,cCount*8)}%"></div></div>
       </div>
       <div class="subj-card-btns">
-        <button class="subj-mini-btn" onclick="openFirstCh('${y.id}','${s.id}','${sj.id}')">📖 Notes</button>
-        <button class="subj-mini-btn" onclick="openSubjMaterials('${y.id}','${s.id}','${sj.id}')">📚 Library${matCount?' ('+matCount+')':''}</button>
+        <button class="subj-mini-btn" onclick="openFirstCh('${y.id}','${s.id}','${sj.id}')">📝 Ghi chú</button>
+        <button class="subj-mini-btn" onclick="openSubjMaterials('${y.id}','${s.id}','${sj.id}')">📖 SGK${matCount?' ('+matCount+')':''}</button>
       </div>
     </div>`;
   }).join('');
@@ -1292,7 +1382,7 @@ function openSubjMaterials(yId,sId,sjId) {
     <span onclick="showDash()">${x(y.name)}</span><span class="bc-sep">/</span>
     <span onclick="showDash()">${x(s.name)}</span><span class="bc-sep">/</span>
     <span style="color:${sj.color||'var(--accent)'}">${x(sj.icon)} ${x(sj.name)}</span><span class="bc-sep">/</span>
-    <span class="bc-cur">📚 Library</span>`;
+    <span class="bc-cur">📖 SGK Material</span>`;
   renderSubjMatGrid();
 }
 async function uploadSubjMaterial(e) {
@@ -1462,6 +1552,11 @@ function onEdit() {
 }
 
 /* ───── TTS ───── */
+let ttsWordEls = [];
+let ttsCurrentIdx = -1;
+let ttsTotalWords = 0;
+let ttsPaused = false;
+
 function loadVoices() {
   const load=()=>{ allVoices=speechSynthesis.getVoices(); };
   load();
@@ -1476,13 +1571,79 @@ function populateTTSVoices() {
     filtered.map(v=>`<option value="${v.name}" ${v.name===settings.ttsVoice?'selected':''}>${v.name} (${v.lang})</option>`).join('');
 }
 function openTTSMenu() {
-  if(window.speechSynthesis.speaking){ stopTTS(); return; }
+  if(window.speechSynthesis.speaking||ttsPaused){ stopTTS(); return; }
   startTTS();
+}
+function buildTTSOverlay(txt, chName) {
+  // Tokenize preserving char positions
+  const tokens = [];
+  const re = /(\S+|\s+)/g;
+  let m;
+  while ((m = re.exec(txt)) !== null) {
+    tokens.push({ text: m[0], start: m.index });
+  }
+  let html = '';
+  let wordCount = 0;
+  tokens.forEach(tok => {
+    if (/^\s+$/.test(tok.text)) {
+      // whitespace / newlines
+      html += tok.text.replace(/\n+/g, '<span class="tts-br"></span>').replace(/ +/g, ' ');
+    } else {
+      html += `<span class="tts-word" data-start="${tok.start}" data-idx="${wordCount}">${tok.text.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</span>`;
+      wordCount++;
+    }
+  });
+  ttsTotalWords = wordCount;
+  const overlay = document.getElementById('tts-overlay');
+  document.getElementById('tts-words-content').innerHTML = html;
+  document.getElementById('tts-overlay-title').textContent = chName || 'Listening…';
+  document.getElementById('tts-progress-fill').style.width = '0%';
+  document.getElementById('tts-pause-btn').textContent = '⏸ Pause';
+  ttsWordEls = Array.from(overlay.querySelectorAll('.tts-word'));
+  ttsCurrentIdx = -1;
+  overlay.classList.remove('hidden');
+}
+function highlightTTSWord(charIndex) {
+  // Find word at charIndex
+  let target = null;
+  for (let i = 0; i < ttsWordEls.length; i++) {
+    const start = parseInt(ttsWordEls[i].dataset.start);
+    const len = ttsWordEls[i].textContent.length;
+    if (charIndex >= start && charIndex < start + len + 1) {
+      target = i; break;
+    }
+  }
+  if (target === null) {
+    // Fallback: closest
+    let best = 0, bestDiff = Infinity;
+    ttsWordEls.forEach((el, i) => {
+      const diff = Math.abs(parseInt(el.dataset.start) - charIndex);
+      if (diff < bestDiff) { bestDiff = diff; best = i; }
+    });
+    target = best;
+  }
+  if (target === ttsCurrentIdx) return;
+  // Update classes
+  ttsWordEls.forEach((el, i) => {
+    if (i < target)       { el.className = 'tts-word tts-past'; }
+    else if (i === target){ el.className = 'tts-word tts-lit'; }
+    else                  { el.className = 'tts-word'; }
+  });
+  ttsCurrentIdx = target;
+  // Scroll into view
+  const el = ttsWordEls[target];
+  el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  // Progress
+  if (ttsTotalWords > 0) {
+    document.getElementById('tts-progress-fill').style.width = Math.round((target / ttsTotalWords) * 100) + '%';
+  }
 }
 function startTTS() {
   const txt=document.getElementById('editor').innerText.trim();
   if(!txt){ toast('No notes to read yet!'); return; }
   stopTTS();
+  const ch = getCh();
+  buildTTSOverlay(txt, ch?.name || 'Notes');
   const u=new SpeechSynthesisUtterance(txt);
   u.lang=settings.ttsLang||'en-US';
   u.rate=settings.ttsRate||1;
@@ -1490,11 +1651,32 @@ function startTTS() {
     const v=allVoices.find(v=>v.name===settings.ttsVoice);
     if(v) u.voice=v;
   }
-  u.onend=()=>ttsBtn(false);
-  u.onerror=()=>ttsBtn(false);
-  window.speechSynthesis.speak(u); ttsBtn(true);
+  u.onboundary = (e) => {
+    if (e.name === 'word') highlightTTSWord(e.charIndex);
+  };
+  u.onend=()=>{ ttsBtn(false); hideTTSOverlay(); ttsPaused=false; };
+  u.onerror=()=>{ ttsBtn(false); hideTTSOverlay(); ttsPaused=false; };
+  window.speechSynthesis.speak(u); ttsBtn(true); ttsPaused=false;
 }
-function stopTTS() { if(window.speechSynthesis.speaking) window.speechSynthesis.cancel(); ttsBtn(false); }
+function hideTTSOverlay() {
+  document.getElementById('tts-overlay').classList.add('hidden');
+}
+function stopTTS() {
+  if(window.speechSynthesis.speaking||ttsPaused) window.speechSynthesis.cancel();
+  ttsBtn(false); hideTTSOverlay(); ttsPaused=false;
+}
+function toggleTTSPause() {
+  const btn = document.getElementById('tts-pause-btn');
+  if (!ttsPaused) {
+    window.speechSynthesis.pause();
+    ttsPaused = true;
+    btn.textContent = '▶ Resume';
+  } else {
+    window.speechSynthesis.resume();
+    ttsPaused = false;
+    btn.textContent = '⏸ Pause';
+  }
+}
 function ttsBtn(on) {
   const b=document.getElementById('tts-btn'); if(!b) return;
   b.textContent=on?'⏹ Stop':'🔊 Listen'; b.classList.toggle('on',on);
