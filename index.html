@@ -506,7 +506,7 @@ mark.hl { background: rgba(245,166,35,0.3); color: var(--text); border-radius: 2
 
 /* ===================== UTILS ===================== */
 .hidden { display: none !important; }
-#import-file, #mat-file-input, #subj-mat-file-input, #bulk-fc-file, #bulk-quiz-file { display: none; }
+#import-file, #mat-file-input, #subj-mat-file-input, #bulk-file-input { display: none; }
 @media (max-width: 680px) {
   #sidebar { display: none; }
   .stats-row { grid-template-columns: repeat(2,1fr); }
@@ -1896,7 +1896,7 @@ function showBulkPreview() {
   if(bulkMode==='flashcards'){
     prevEl.innerHTML=bulkParsed.slice(0,8).map(c=>`<div class="bulk-preview-item"><strong>Q:</strong> ${x(c.front)} → <strong>A:</strong> ${x(c.back)}</div>`).join('');
   } else {
-    prevEl.innerHTML=bulkParsed.slice(0,8).map(c=>`<div class="bulk-preview-item"><strong>${x(c.q)}</strong> → ✓ ${x(c.opts[0])}${c.opts.length>1?', '+x(c.opts.slice(1).join(', )):''}</div>`).join('');
+    prevEl.innerHTML=bulkParsed.slice(0,8).map(c=>`<div class="bulk-preview-item"><strong>${x(c.q)}</strong> → ✓ ${x(c.opts[0])}${c.opts.length>1?', '+x(c.opts.slice(1).join(', ')):''}</div>`).join('');
   }
   if(bulkParsed.length>8) prevEl.innerHTML+=`<div class="bulk-preview-item" style="font-style:italic">…and ${bulkParsed.length-8} more</div>`;
   prevEl.classList.remove('hidden');
@@ -2058,8 +2058,9 @@ async function sendAIMessage() {
   } catch(e){
     removeAIThinking(thinkId);
     addAIMessage('assistant',`❌ Error: ${e.message}`,null,false);
+  } finally {
+    document.getElementById('ai-send-btn').disabled=false;
   }
-  document.getElementById('ai-send-btn').disabled=false;
 }
 function addAIMessage(role,content,id,isMarkdown) {
   const chat=document.getElementById('ai-chat');
@@ -2088,12 +2089,12 @@ function markdownToHTML(text) {
     .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
     .replace(/\*(.+?)\*/g,'<em>$1</em>')
     .replace(/`(.+?)`/g,'<code>$1</code>')
+    .replace(/#{3}\s([^\n]+)/g,'<strong>$1</strong>')
+    .replace(/#{2}\s([^\n]+)/g,'<strong>$1</strong>')
+    .replace(/#{1}\s([^\n]+)/g,'<strong>$1</strong>')
     .replace(/\n\n/g,'</p><p>')
     .replace(/\n/g,'<br>')
-    .replace(/^•\s/gm,'• ')
-    .replace(/#{3}\s(.+)/g,'<strong>$1</strong>')
-    .replace(/#{2}\s(.+)/g,'<strong>$1</strong>')
-    .replace(/#{1}\s(.+)/g,'<strong>$1</strong>');
+    .replace(/^•\s/gm,'• ');
 }
 
 /* ───────────────────────────────────────────────────────────
