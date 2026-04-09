@@ -7,6 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,700;1,500&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
 /* ===================== CSS VARIABLES ===================== */
 :root {
@@ -245,6 +246,63 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 .save-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); transition: var(--t); }
 .save-dot.saving { background: var(--accent); animation: pulse 0.8s infinite; }
 @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+/* ===================== VISUALIZATION PANEL ===================== */
+.viz-panel { flex: 1; overflow-y: auto; padding: 28px 36px; display: flex; flex-direction: column; gap: 20px; }
+.viz-toolbar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 18px; }
+.viz-toolbar label { font-size: 0.75rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; }
+.viz-select { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 0.82rem; padding: 5px 10px; outline: none; cursor: pointer; }
+.viz-select:focus { border-color: var(--accent); }
+.viz-sep { width: 1px; height: 24px; background: var(--border); }
+.viz-layout { display: grid; grid-template-columns: 320px 1fr; gap: 18px; min-height: 420px; }
+.viz-data-panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; display: flex; flex-direction: column; gap: 10px; overflow-y: auto; max-height: 500px; }
+.viz-data-panel h4 { font-size: 0.8rem; font-weight: 600; color: var(--text-soft); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 4px; }
+.viz-data-table { width: 100%; border-collapse: collapse; }
+.viz-data-table th { font-size: 0.72rem; color: var(--text-muted); padding: 5px 8px; border-bottom: 1px solid var(--border); text-align: left; font-weight: 600; }
+.viz-data-table td { padding: 3px 4px; }
+.viz-data-table input { width: 100%; background: var(--card); border: 1px solid transparent; border-radius: 4px; color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 0.82rem; padding: 5px 7px; outline: none; transition: var(--t); }
+.viz-data-table input:focus { border-color: var(--accent); }
+.viz-data-table .del-row-btn { background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 0.75rem; padding: 4px 6px; border-radius: 3px; transition: var(--t); }
+.viz-data-table .del-row-btn:hover { background: rgba(232,93,74,0.15); color: var(--red); }
+.viz-chart-panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; }
+.viz-chart-panel canvas { max-width: 100%; max-height: 420px; }
+.viz-chart-empty { color: var(--text-muted); font-size: 0.85rem; text-align: center; }
+.viz-chart-empty div:first-child { font-size: 2.5rem; opacity: 0.3; margin-bottom: 8px; }
+.viz-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.viz-title-input { flex: 1; background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 0.85rem; padding: 7px 12px; outline: none; min-width: 180px; }
+.viz-title-input:focus { border-color: var(--accent); }
+.viz-series-hdr { display: flex; justify-content: space-between; align-items: center; }
+.viz-series-label-row { display: grid; grid-template-columns: 1fr 80px 28px; gap: 4px; margin-bottom: 4px; }
+.viz-series-label-row span { font-size: 0.7rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; }
+.viz-series-row { display: grid; grid-template-columns: 1fr 80px 28px; gap: 4px; align-items: center; margin-bottom: 4px; }
+.viz-swatch { width: 14px; height: 14px; border-radius: 3px; flex-shrink: 0; display: inline-block; }
+.viz-color-input { width: 26px; height: 26px; border: 1px solid var(--border); border-radius: 4px; cursor: pointer; padding: 0; background: none; }
+
+/* ===================== AI PROPOSAL CARDS ===================== */
+.ai-proposal-card {
+  background: var(--card); border: 1px solid rgba(124,106,247,0.4);
+  border-radius: var(--radius); padding: 16px 18px; margin: 6px 0;
+}
+.ai-proposal-header { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+.ai-proposal-icon { font-size: 1.1rem; }
+.ai-proposal-title { font-weight: 600; font-size: 0.88rem; color: var(--accent2); flex: 1; }
+.ai-proposal-badge { font-size: 0.67rem; background: rgba(124,106,247,0.18); color: var(--accent2); padding: 2px 8px; border-radius: 10px; font-weight: 700; }
+.ai-proposal-desc { font-size: 0.79rem; color: var(--text-muted); margin-bottom: 12px; line-height: 1.55; }
+.ai-proposal-preview { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 10px 12px; margin-bottom: 12px; max-height: 200px; overflow-y: auto; }
+.ai-proposal-item { font-size: 0.78rem; color: var(--text-soft); padding: 5px 0; border-bottom: 1px solid var(--border); line-height: 1.4; }
+.ai-proposal-item:last-child { border-bottom: none; }
+.ai-proposal-item strong { color: var(--text); }
+.ai-proposal-more { font-size: 0.73rem; color: var(--text-muted); font-style: italic; padding-top: 6px; }
+.ai-proposal-btns { display: flex; gap: 8px; }
+.btn-approve { padding: 7px 16px; background: rgba(76,175,125,0.15); border: 1px solid rgba(76,175,125,0.4); border-radius: var(--radius-sm); color: var(--green); font-family: 'DM Sans', sans-serif; font-size: 0.82rem; font-weight: 600; cursor: pointer; transition: var(--t); }
+.btn-approve:hover { background: rgba(76,175,125,0.25); }
+.btn-approve:disabled { opacity: 0.4; cursor: not-allowed; }
+.btn-reject { padding: 7px 14px; background: rgba(232,93,74,0.1); border: 1px solid rgba(232,93,74,0.3); border-radius: var(--radius-sm); color: var(--red); font-family: 'DM Sans', sans-serif; font-size: 0.82rem; cursor: pointer; transition: var(--t); }
+.btn-reject:hover { background: rgba(232,93,74,0.18); }
+.btn-reject:disabled { opacity: 0.4; cursor: not-allowed; }
+.ai-proposal-status { display: flex; align-items: center; gap: 6px; font-size: 0.79rem; font-weight: 600; margin-top: 8px; padding: 6px 10px; border-radius: var(--radius-sm); }
+.ai-proposal-status.applied { background: rgba(76,175,125,0.12); color: var(--green); }
+.ai-proposal-status.rejected { background: rgba(100,100,100,0.1); color: var(--text-muted); font-style: italic; font-weight: 400; }
 
 /* ===================== BUTTONS ===================== */
 .btn-primary {
@@ -683,6 +741,7 @@ mark.hl { background: rgba(245,166,35,0.3); color: var(--text); border-radius: 2
       <button class="tab-btn" id="tab-quiz" onclick="switchTab('quiz')">✏️ Quiz <span class="badge" id="b-quiz">0</span></button>
       <button class="tab-btn" id="tab-materials" onclick="switchTab('materials')">📎 Chapter Material <span class="badge" id="b-mats">0</span></button>
       <button class="tab-btn" id="tab-ai" onclick="switchTab('ai')">🤖 AI</button>
+      <button class="tab-btn" id="tab-viz" onclick="switchTab('viz')">📊 Visualize</button>
     </div>
     <div class="ch-content">
 
@@ -904,6 +963,78 @@ mark.hl { background: rgba(245,166,35,0.3); color: var(--text); border-radius: 2
           <button class="ai-send-btn" id="ai-send-btn" onclick="sendAIMessage()">Send ↑</button>
         </div>
       </div>
+
+      <!-- VISUALIZE PANEL -->
+      <div id="pane-viz" class="hidden viz-panel">
+        <div class="panel-header">
+          <h3>📊 Visualizations</h3>
+          <div class="btn-row">
+            <button class="btn-sec" onclick="aiGenerateViz()">🤖 AI Generate Chart</button>
+            <button class="btn-sec" onclick="exportChart()">⬇ Export PNG</button>
+            <button class="btn-primary" onclick="renderVizChart()">▶ Render</button>
+          </div>
+        </div>
+        <div class="viz-toolbar">
+          <label>Type:</label>
+          <select class="viz-select" id="viz-type" onchange="onVizTypeChange()">
+            <option value="bar">Bar Chart</option>
+            <option value="line">Line Chart</option>
+            <option value="pie">Pie Chart</option>
+            <option value="doughnut">Doughnut</option>
+            <option value="radar">Radar</option>
+            <option value="polarArea">Polar Area</option>
+          </select>
+          <div class="viz-sep"></div>
+          <label>Theme:</label>
+          <select class="viz-select" id="viz-theme" onchange="renderVizChart()">
+            <option value="default">Default</option>
+            <option value="warm">Warm</option>
+            <option value="cool">Cool</option>
+            <option value="mono">Mono</option>
+            <option value="pastel">Pastel</option>
+          </select>
+          <div class="viz-sep"></div>
+          <label>Title:</label>
+          <input class="viz-title-input" id="viz-title" placeholder="Chart title…" oninput="renderVizChart()" style="width:160px">
+        </div>
+        <div class="viz-layout">
+          <div class="viz-data-panel">
+            <div class="viz-series-hdr">
+              <h4>Data</h4>
+              <button class="btn-sec" style="font-size:0.72rem;padding:4px 9px" onclick="addVizRow()">＋ Row</button>
+            </div>
+            <table class="viz-data-table" id="viz-data-table">
+              <thead><tr><th id="viz-col-label">Label</th><th id="viz-col-value">Value</th><th style="width:24px"></th></tr></thead>
+              <tbody id="viz-data-body"></tbody>
+            </table>
+            <div style="margin-top:6px;display:flex;gap:6px">
+              <button class="btn-sec" style="font-size:0.72rem;padding:5px 10px;flex:1" onclick="addVizSeries()" id="viz-add-series-btn">＋ Add Series</button>
+              <button class="btn-sec" style="font-size:0.72rem;padding:5px 10px" onclick="clearVizData()">Clear</button>
+            </div>
+            <div id="viz-series-mgr" style="margin-top:10px;display:none">
+              <div class="viz-series-hdr" style="margin-bottom:6px"><h4>Series Colors</h4></div>
+              <div id="viz-series-list"></div>
+            </div>
+            <div style="margin-top:12px;border-top:1px solid var(--border);padding-top:12px">
+              <h4 style="margin-bottom:8px">Saved Charts</h4>
+              <div id="viz-saved-list" style="display:flex;flex-direction:column;gap:6px"></div>
+              <div id="viz-saved-empty" style="font-size:0.78rem;color:var(--text-muted);font-style:italic">No saved charts yet</div>
+            </div>
+          </div>
+          <div class="viz-chart-panel" id="viz-chart-panel">
+            <div class="viz-chart-empty" id="viz-chart-empty">
+              <div>📊</div>
+              <div>Enter data and click <strong>Render</strong></div>
+              <div style="font-size:0.75rem;margin-top:6px;color:var(--text-muted)">Or let AI generate one from your notes</div>
+            </div>
+            <canvas id="viz-canvas" style="display:none"></canvas>
+            <div id="viz-chart-actions" style="margin-top:12px;display:none;gap:8px">
+              <button class="btn-sec" style="font-size:0.76rem" onclick="saveVizChart()">💾 Save Chart</button>
+              <button class="btn-sec" style="font-size:0.76rem" onclick="copyVizToNotes()">📝 Insert into Notes</button>
+            </div>
+          </div>
+        </div>
+      </div><!-- end pane-viz -->
 
     </div>
   </div>
@@ -1562,7 +1693,7 @@ function setBadges(ch) {
 /* ───── Tabs ───── */
 function switchTab(t) {
   tab=t;
-  ['notes','flashcards','quiz','materials','ai'].forEach(n=>{
+  ['notes','flashcards','quiz','materials','ai','viz'].forEach(n=>{
     document.getElementById(`tab-${n}`)?.classList.toggle('active',n===t);
     document.getElementById(`pane-${n}`)?.classList.toggle('hidden',n!==t);
   });
@@ -1570,6 +1701,7 @@ function switchTab(t) {
   if(t==='quiz')      { renderQList(); endQuiz(); }
   if(t==='materials') { renderMatGrid(); }
   if(t==='ai')        { checkAIKey(); setTimeout(()=>document.getElementById('ai-input')?.focus(),80); }
+  if(t==='viz')       { initVizIfNeeded(); renderVizSavedList(); }
 }
 
 /* ───── Editor Tools ───── */
@@ -2460,6 +2592,99 @@ function getChapterContext() {
   const notes=document.getElementById('editor')?.innerText?.trim()||'';
   return `Chapter: "${ch?.name||''}"\n\nNotes:\n${notes||'(no notes yet)'}\n\nFlashcards: ${(ch?.flashcards||[]).length}\nQuiz questions: ${(ch?.quiz||[]).length}`;
 }
+/* ── AI Proposal System ── */
+const aiProposals = {}; // id → { type, data }
+
+function showAIProposal(type, data) {
+  const propId = 'prop_' + uid();
+  aiProposals[propId] = { type, data, applied: false, rejected: false };
+  const chat = document.getElementById('ai-chat');
+
+  let icon, title, badge, desc, previewHTML;
+
+  if (type === 'flashcards') {
+    icon = '🃏'; title = 'Add Flashcards'; badge = data.length + ' cards';
+    desc = 'AI wants to add the following flashcards to this chapter. Review and approve to save them.';
+    previewHTML = data.slice(0, 6).map(c =>
+      `<div class="ai-proposal-item"><strong>${x(c.front)}</strong> → ${x(c.back)}</div>`
+    ).join('');
+    if (data.length > 6) previewHTML += `<div class="ai-proposal-more">…and ${data.length - 6} more cards</div>`;
+  } else if (type === 'quiz') {
+    icon = '✏️'; title = 'Add Quiz Questions'; badge = data.length + ' questions';
+    desc = 'AI wants to add the following quiz questions to this chapter. Review and approve to save them.';
+    previewHTML = data.slice(0, 5).map((q, i) =>
+      `<div class="ai-proposal-item"><strong>${i+1}. ${x(q.q)}</strong><br><span style="font-size:0.73rem;color:var(--green)">✓ ${x(q.opts[0])}</span>${q.opts.slice(1).map(o=>`<span style="font-size:0.73rem;color:var(--text-muted)"> · ${x(o)}</span>`).join('')}</div>`
+    ).join('');
+    if (data.length > 5) previewHTML += `<div class="ai-proposal-more">…and ${data.length - 5} more questions</div>`;
+  } else if (type === 'notes') {
+    icon = '📝'; title = 'Update Notes'; badge = 'replace content';
+    desc = 'AI wants to update your notes for this chapter. This will replace the current note content.';
+    previewHTML = `<div class="ai-proposal-item" style="white-space:pre-wrap;font-size:0.75rem">${x(data.substring(0,400))}${data.length>400?'…':''}</div>`;
+  }
+
+  const html = `
+  <div class="ai-msg assistant" id="${propId}_wrap">
+    <div class="ai-msg-avatar">🤖</div>
+    <div style="flex:1">
+      <div class="ai-msg-body" style="padding:4px 0 0">
+        <div class="ai-proposal-card" id="${propId}">
+          <div class="ai-proposal-header">
+            <span class="ai-proposal-icon">${icon}</span>
+            <span class="ai-proposal-title">${title}</span>
+            <span class="ai-proposal-badge">${badge}</span>
+          </div>
+          <div class="ai-proposal-desc">${desc}</div>
+          <div class="ai-proposal-preview">${previewHTML}</div>
+          <div class="ai-proposal-btns">
+            <button class="btn-approve" id="${propId}_approve" onclick="applyProposal('${propId}')">✅ Apply</button>
+            <button class="btn-reject" id="${propId}_reject" onclick="rejectProposal('${propId}')">❌ Discard</button>
+          </div>
+          <div id="${propId}_status"></div>
+        </div>
+      </div>
+    </div>
+  </div>`;
+  chat.insertAdjacentHTML('beforeend', html);
+  chat.scrollTop = chat.scrollHeight;
+}
+
+function applyProposal(propId) {
+  const p = aiProposals[propId];
+  if (!p || p.applied || p.rejected) return;
+  p.applied = true;
+  const ch = getCh();
+
+  if (p.type === 'flashcards') {
+    if (!ch.flashcards) ch.flashcards = [];
+    p.data.forEach(c => { if (c.front && c.back) ch.flashcards.push({ id: uid(), front: c.front, back: c.back }); });
+    save(); setBadges(ch); renderFCList();
+    toast(`✅ ${p.data.length} flashcards added!`, 'ok');
+  } else if (p.type === 'quiz') {
+    if (!ch.quiz) ch.quiz = [];
+    p.data.forEach(q => { if (q.q && q.opts?.length >= 2) ch.quiz.push({ id: uid(), q: q.q, opts: q.opts, correct: 0, exp: q.exp || '' }); });
+    save(); setBadges(ch); renderQList();
+    toast(`✅ ${p.data.length} quiz questions added!`, 'ok');
+  } else if (p.type === 'notes') {
+    document.getElementById('editor').innerHTML = p.data;
+    onEdit();
+    toast('✅ Notes updated!', 'ok');
+  }
+
+  document.getElementById(propId + '_approve').disabled = true;
+  document.getElementById(propId + '_reject').disabled = true;
+  document.getElementById(propId + '_status').innerHTML = '<div class="ai-proposal-status applied">✅ Applied successfully!</div>';
+}
+
+function rejectProposal(propId) {
+  const p = aiProposals[propId];
+  if (!p || p.applied || p.rejected) return;
+  p.rejected = true;
+  document.getElementById(propId + '_approve').disabled = true;
+  document.getElementById(propId + '_reject').disabled = true;
+  document.getElementById(propId + '_status').innerHTML = '<div class="ai-proposal-status rejected">Discarded — no changes made.</div>';
+  toast('Proposal discarded.', '');
+}
+
 async function aiAction(type) {
   const prov=settings.aiProvider||'gemini';
   if(prov==='gemini'&&!settings.apiKeys?.length){ openSettings(); return; }
@@ -2492,19 +2717,21 @@ async function aiAction(type) {
       try {
         const clean=resp.replace(/```json|```/g,'').trim();
         const cards=JSON.parse(clean);
-        const ch=getCh(); if(!ch.flashcards) ch.flashcards=[];
-        cards.forEach(c=>{ if(c.front&&c.back) ch.flashcards.push({id:uid(),front:c.front,back:c.back}); });
-        save(); setBadges(ch); renderFCList();
-        addAIMessage('assistant',`✅ Added **${cards.length} flashcards** to this chapter!\n\nSample:\n• **${cards[0]?.front}** → ${cards[0]?.back}`,null,true);
+        const valid=cards.filter(c=>c.front&&c.back);
+        if(valid.length){
+          addAIMessage('assistant',`I've prepared **${valid.length} flashcards** for this chapter. Review them below and approve to add them to your deck.`,null,true);
+          showAIProposal('flashcards', valid);
+        } else { addAIMessage('assistant',resp,null,true); }
       } catch(e){ addAIMessage('assistant',resp,null,true); }
     } else if(type==='quiz'){
       try {
         const clean=resp.replace(/```json|```/g,'').trim();
         const qs=JSON.parse(clean);
-        const ch=getCh(); if(!ch.quiz) ch.quiz=[];
-        qs.forEach(q=>{ if(q.q&&q.opts?.length>=2) ch.quiz.push({id:uid(),q:q.q,opts:q.opts,correct:0,exp:q.exp||''}); });
-        save(); setBadges(ch); renderQList();
-        addAIMessage('assistant',`✅ Added **${qs.length} quiz questions** to this chapter!\n\nFirst: ${qs[0]?.q}`,null,true);
+        const valid=qs.filter(q=>q.q&&q.opts?.length>=2);
+        if(valid.length){
+          addAIMessage('assistant',`I've prepared **${valid.length} quiz questions** for this chapter. Review them below and approve to save them.`,null,true);
+          showAIProposal('quiz', valid);
+        } else { addAIMessage('assistant',resp,null,true); }
       } catch(e){ addAIMessage('assistant',resp,null,true); }
     } else {
       addAIMessage('assistant',resp,null,true);
@@ -2525,7 +2752,19 @@ async function sendAIMessage() {
   addAIMessage('user',msg);
   aiMessages.push({role:'user',content:msg});
   const ctx=getChapterContext();
-  const systemPrompt=`You are a helpful study assistant. The student is studying the following chapter:\n\n${ctx}\n\nAnswer their questions helpfully and concisely.`;
+
+  // Detect if user is requesting data actions
+  const msgLow=msg.toLowerCase();
+  const wantsCards=msgLow.includes('flashcard')||msgLow.includes('flash card')||(msgLow.includes('tạo card')||msgLow.includes('tạo flashcard'));
+  const wantsQuiz=msgLow.includes('quiz')||msgLow.includes('câu hỏi')||msgLow.includes('trắc nghiệm');
+  const wantsNotes=(msgLow.includes('rewrite')||msgLow.includes('update my notes')||msgLow.includes('cập nhật ghi chú')||msgLow.includes('viết lại ghi chú'));
+
+  let systemPrompt=`You are a helpful study assistant. The student is studying the following chapter:\n\n${ctx}\n\nAnswer their questions helpfully and concisely.`;
+  let actionHint='';
+  if(wantsCards) actionHint=`\n\nIf generating flashcards, return ONLY a JSON array: [{"front":"...","back":"..."},...] — no other text.`;
+  if(wantsQuiz)  actionHint=`\n\nIf generating quiz questions, return ONLY a JSON array: [{"q":"...","opts":["correct","wrong1","wrong2"],"exp":"..."},...] — no other text.`;
+  systemPrompt+=actionHint;
+
   document.getElementById('ai-send-btn').disabled=true;
   const thinkId=addAIThinking();
   try {
@@ -2533,8 +2772,29 @@ async function sendAIMessage() {
       ? await callOpenRouterWithHistory(aiMessages, systemPrompt)
       : await callGeminiWithHistory(aiMessages, systemPrompt);
     removeAIThinking(thinkId);
-    addAIMessage('assistant',resp,null,true);
     aiMessages.push({role:'assistant',content:resp});
+
+    // Try to detect JSON proposals from free-form chat
+    if(wantsCards||wantsQuiz){
+      const clean=resp.replace(/```json|```/g,'').trim();
+      const jsonMatch=clean.match(/\[\s*\{[\s\S]*\}\s*\]/);
+      if(jsonMatch){
+        try {
+          const parsed=JSON.parse(jsonMatch[0]);
+          if(wantsCards&&parsed[0]?.front&&parsed[0]?.back){
+            addAIMessage('assistant',`I've prepared **${parsed.length} flashcards**. Review and approve them below.`,null,true);
+            showAIProposal('flashcards', parsed.filter(c=>c.front&&c.back));
+            return;
+          }
+          if(wantsQuiz&&parsed[0]?.q&&parsed[0]?.opts){
+            addAIMessage('assistant',`I've prepared **${parsed.length} quiz questions**. Review and approve them below.`,null,true);
+            showAIProposal('quiz', parsed.filter(q=>q.q&&q.opts?.length>=2));
+            return;
+          }
+        } catch(e){}
+      }
+    }
+    addAIMessage('assistant',resp,null,true);
   } catch(e){
     removeAIThinking(thinkId);
     addAIMessage('assistant',`❌ Error: ${e.message}`,null,false);
@@ -2765,6 +3025,347 @@ function onKey(e) {
     if(e.key==='ArrowRight') nextCard();
     if(e.key==='ArrowLeft')  prevCard();
     if(e.key===' '&&document.activeElement?.id!=='ai-input'){ e.preventDefault(); flipCard(); }
+  }
+}
+
+/* ───────────────────────────────────────────────────────────
+   VISUALIZATION ENGINE
+   ─────────────────────────────────────────────────────────── */
+let vizChart = null;
+let vizState = {
+  series: [{ name: 'Series 1', color: '#f5a623', values: [] }],
+  labels: [],
+  initialized: false
+};
+
+const VIZ_THEMES = {
+  default: ['#f5a623','#7c6af7','#4caf7d','#e85d4a','#2196f3','#e91e8c','#00bcd4','#ff9800'],
+  warm:    ['#f5a623','#e85d4a','#ff9800','#e91e8c','#ffcc02','#c0392b','#e67e22','#d35400'],
+  cool:    ['#7c6af7','#2196f3','#00bcd4','#4caf7d','#1abc9c','#3f51b5','#009688','#607d8b'],
+  mono:    ['#e8e3dc','#a39b93','#6b6560','#3d3b38','#2d2a27','#1a1917','#c8c3bb','#8a837b'],
+  pastel:  ['#ffb3ba','#ffdfba','#ffffba','#baffc9','#bae1ff','#d4baff','#ffd4ba','#c9ffba']
+};
+
+function getVizColors(n) {
+  const theme = document.getElementById('viz-theme')?.value || 'default';
+  const base = VIZ_THEMES[theme] || VIZ_THEMES.default;
+  // Use series custom colors if set, else fall back to theme
+  const out = [];
+  for (let i = 0; i < n; i++) {
+    if (vizState.series[i]?.color) out.push(vizState.series[i].color);
+    else out.push(base[i % base.length]);
+  }
+  return out;
+}
+
+function initVizIfNeeded() {
+  if (vizState.initialized) { renderVizSavedList(); return; }
+  vizState.initialized = true;
+  // Seed with sample data
+  vizState.labels = ['Jan', 'Feb', 'Mar', 'Apr', 'May'];
+  vizState.series = [
+    { name: 'Series 1', color: '#f5a623', values: [42, 67, 53, 85, 74] }
+  ];
+  rebuildVizTable();
+}
+
+function rebuildVizTable() {
+  const type = document.getElementById('viz-type')?.value || 'bar';
+  const isMultiSeries = !['pie','doughnut','polarArea'].includes(type);
+  const colLabel = document.getElementById('viz-col-label');
+  const colValue = document.getElementById('viz-col-value');
+  if (colLabel) colLabel.textContent = 'Label';
+  if (colValue) colValue.textContent = isMultiSeries ? vizState.series[0]?.name || 'Value' : 'Value';
+
+  const tbody = document.getElementById('viz-data-body');
+  if (!tbody) return;
+  const rows = vizState.labels.map((lbl, i) => {
+    const valCells = vizState.series.map((s, si) =>
+      `<td><input value="${s.values[i]??''}" oninput="onVizCellInput(${i},${si},this.value)" placeholder="0"></td>`
+    ).join('');
+    return `<tr>
+      <td><input value="${x(lbl)}" oninput="onVizLabelInput(${i},this.value)" placeholder="Label"></td>
+      ${valCells}
+      <td><button class="del-row-btn" onclick="delVizRow(${i})">✕</button></td>
+    </tr>`;
+  }).join('');
+  tbody.innerHTML = rows;
+
+  // Multi-series column headers
+  if (isMultiSeries && vizState.series.length > 1) {
+    const thead = document.getElementById('viz-data-table')?.querySelector('thead tr');
+    if (thead) {
+      thead.innerHTML = '<th>Label</th>' +
+        vizState.series.map((s,si)=>`<th style="font-size:0.7rem">${x(s.name)}</th>`).join('') +
+        '<th style="width:24px"></th>';
+    }
+  }
+
+  // Series manager
+  const mgr = document.getElementById('viz-series-mgr');
+  const list = document.getElementById('viz-series-list');
+  const addBtn = document.getElementById('viz-add-series-btn');
+  if (isMultiSeries) {
+    if (mgr) mgr.style.display = 'block';
+    if (addBtn) addBtn.style.display = 'flex';
+    if (list) list.innerHTML = vizState.series.map((s, si) => `
+      <div class="viz-series-row" style="margin-bottom:6px;display:grid;grid-template-columns:1fr 90px 28px 28px;gap:4px;align-items:center">
+        <input style="background:var(--card);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:0.8rem;padding:4px 7px;outline:none" value="${x(s.name)}" oninput="onVizSeriesName(${si},this.value)">
+        <input type="color" class="viz-color-input" value="${s.color||'#f5a623'}" oninput="onVizSeriesColor(${si},this.value)">
+        ${vizState.series.length>1?`<button class="del-row-btn" onclick="delVizSeries(${si})">✕</button>`:'<span></span>'}
+      </div>`).join('');
+  } else {
+    if (mgr) mgr.style.display = 'none';
+    if (addBtn) addBtn.style.display = 'none';
+  }
+}
+
+function onVizTypeChange() { rebuildVizTable(); renderVizChart(); }
+function onVizLabelInput(i, v) { vizState.labels[i] = v; }
+function onVizCellInput(row, si, v) { if (!vizState.series[si]) return; vizState.series[si].values[row] = parseFloat(v) || 0; }
+function onVizSeriesName(si, v) { if (vizState.series[si]) vizState.series[si].name = v; rebuildVizTable(); }
+function onVizSeriesColor(si, v) { if (vizState.series[si]) vizState.series[si].color = v; }
+
+function addVizRow() {
+  vizState.labels.push('New');
+  vizState.series.forEach(s => s.values.push(0));
+  rebuildVizTable();
+}
+function delVizRow(i) {
+  vizState.labels.splice(i, 1);
+  vizState.series.forEach(s => s.values.splice(i, 1));
+  rebuildVizTable();
+}
+function addVizSeries() {
+  const colors = VIZ_THEMES.default;
+  const newColor = colors[vizState.series.length % colors.length];
+  vizState.series.push({ name: 'Series ' + (vizState.series.length + 1), color: newColor, values: vizState.labels.map(() => 0) });
+  rebuildVizTable();
+}
+function delVizSeries(si) {
+  if (vizState.series.length <= 1) { toast('Need at least one series', 'err'); return; }
+  vizState.series.splice(si, 1);
+  rebuildVizTable();
+}
+function clearVizData() {
+  vizState.labels = ['A', 'B', 'C'];
+  vizState.series = [{ name: 'Series 1', color: '#f5a623', values: [0, 0, 0] }];
+  rebuildVizTable();
+  const canvas = document.getElementById('viz-canvas');
+  const empty = document.getElementById('viz-chart-empty');
+  const actions = document.getElementById('viz-chart-actions');
+  if (canvas) canvas.style.display = 'none';
+  if (empty) empty.style.display = 'block';
+  if (actions) actions.style.display = 'none';
+  if (vizChart) { vizChart.destroy(); vizChart = null; }
+}
+
+function renderVizChart() {
+  const type = document.getElementById('viz-type')?.value || 'bar';
+  const title = document.getElementById('viz-title')?.value || '';
+  const canvas = document.getElementById('viz-canvas');
+  const empty = document.getElementById('viz-chart-empty');
+  const actions = document.getElementById('viz-chart-actions');
+  if (!canvas) return;
+
+  // Sync values from DOM inputs
+  const tbody = document.getElementById('viz-data-body');
+  if (tbody) {
+    const rows = tbody.querySelectorAll('tr');
+    rows.forEach((row, i) => {
+      const inputs = row.querySelectorAll('input');
+      if (inputs[0]) vizState.labels[i] = inputs[0].value || vizState.labels[i];
+      vizState.series.forEach((s, si) => {
+        if (inputs[si + 1]) s.values[i] = parseFloat(inputs[si + 1].value) || 0;
+      });
+    });
+  }
+
+  if (vizState.labels.length === 0) {
+    toast('Add some data first!', 'err'); return;
+  }
+
+  canvas.style.display = 'block';
+  if (empty) empty.style.display = 'none';
+  if (actions) actions.style.display = 'flex';
+
+  if (vizChart) { vizChart.destroy(); vizChart = null; }
+
+  const isMultiSeries = !['pie','doughnut','polarArea'].includes(type);
+  const colors = getVizColors(isMultiSeries ? vizState.series.length : vizState.labels.length);
+
+  Chart.defaults.color = '#a39b93';
+  Chart.defaults.borderColor = '#2e2b27';
+
+  let datasets;
+  if (isMultiSeries) {
+    datasets = vizState.series.map((s, si) => ({
+      label: s.name,
+      data: s.values,
+      backgroundColor: type === 'line' ? s.color + '33' : s.color,
+      borderColor: s.color,
+      borderWidth: 2,
+      fill: type === 'line',
+      tension: 0.3,
+      pointBackgroundColor: s.color,
+      pointRadius: 4
+    }));
+  } else {
+    datasets = [{
+      data: vizState.series[0]?.values || [],
+      backgroundColor: colors.map(c => c + 'cc'),
+      borderColor: colors,
+      borderWidth: 2
+    }];
+  }
+
+  const chartConfig = {
+    type,
+    data: { labels: vizState.labels, datasets },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      plugins: {
+        legend: { display: true, position: 'bottom', labels: { color: '#a39b93', padding: 16, font: { size: 12 } } },
+        title: title ? { display: true, text: title, color: '#e8e3dc', font: { size: 15, family: "'Playfair Display', serif" }, padding: { bottom: 14 } } : { display: false }
+      },
+      scales: isMultiSeries ? {
+        x: { ticks: { color: '#a39b93' }, grid: { color: '#2e2b27' } },
+        y: { ticks: { color: '#a39b93' }, grid: { color: '#2e2b27' } }
+      } : {}
+    }
+  };
+
+  vizChart = new Chart(canvas, chartConfig);
+}
+
+function exportChart() {
+  if (!vizChart) { toast('Render a chart first!', 'err'); return; }
+  const canvas = document.getElementById('viz-canvas');
+  const link = document.createElement('a');
+  link.download = (document.getElementById('viz-title')?.value || 'chart') + '.png';
+  link.href = canvas.toDataURL('image/png');
+  link.click();
+  toast('Chart exported as PNG ✓', 'ok');
+}
+
+function copyVizToNotes() {
+  if (!vizChart) { toast('Render a chart first!', 'err'); return; }
+  const canvas = document.getElementById('viz-canvas');
+  const dataUrl = canvas.toDataURL('image/png');
+  const editor = document.getElementById('editor');
+  if (!editor) return;
+  const title = document.getElementById('viz-title')?.value || 'Chart';
+  editor.focus();
+  document.execCommand('insertHTML', false, `<p><img src="${dataUrl}" alt="${x(title)}" style="max-width:100%;border-radius:8px;margin:8px 0"></p><p><em>${x(title)}</em></p>`);
+  switchTab('notes');
+  toast('Chart inserted into notes ✓', 'ok');
+}
+
+function saveVizChart() {
+  if (!vizChart) { toast('Render a chart first!', 'err'); return; }
+  const ch = getCh(); if (!ch) return;
+  if (!ch.vizCharts) ch.vizCharts = [];
+  const canvas = document.getElementById('viz-canvas');
+  const title = document.getElementById('viz-title')?.value || ('Chart ' + (ch.vizCharts.length + 1));
+  ch.vizCharts.push({
+    id: uid(),
+    title,
+    type: document.getElementById('viz-type')?.value || 'bar',
+    labels: [...vizState.labels],
+    series: JSON.parse(JSON.stringify(vizState.series)),
+    theme: document.getElementById('viz-theme')?.value || 'default',
+    thumbnail: canvas.toDataURL('image/png', 0.5),
+    savedAt: Date.now()
+  });
+  save();
+  renderVizSavedList();
+  toast(`"${title}" saved ✓`, 'ok');
+}
+
+function renderVizSavedList() {
+  const ch = getCh();
+  const charts = ch?.vizCharts || [];
+  const list = document.getElementById('viz-saved-list');
+  const empty = document.getElementById('viz-saved-empty');
+  if (!list) return;
+  if (!charts.length) {
+    list.innerHTML = '';
+    if (empty) empty.style.display = 'block';
+    return;
+  }
+  if (empty) empty.style.display = 'none';
+  list.innerHTML = charts.map(c => `
+    <div style="display:flex;align-items:center;gap:8px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 10px">
+      ${c.thumbnail ? `<img src="${c.thumbnail}" style="width:44px;height:30px;object-fit:cover;border-radius:3px;flex-shrink:0">` : `<span style="font-size:1.3rem">📊</span>`}
+      <div style="flex:1;min-width:0">
+        <div style="font-size:0.8rem;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${x(c.title)}</div>
+        <div style="font-size:0.7rem;color:var(--text-muted)">${c.type} · ${new Date(c.savedAt).toLocaleDateString()}</div>
+      </div>
+      <button class="nav-icon-btn" onclick="loadSavedViz('${c.id}')" title="Load">↗</button>
+      <button class="nav-icon-btn" onclick="deleteSavedViz('${c.id}')" title="Delete" style="color:var(--red)">✕</button>
+    </div>`).join('');
+}
+
+function loadSavedViz(id) {
+  const ch = getCh();
+  const c = ch?.vizCharts?.find(v => v.id === id);
+  if (!c) return;
+  document.getElementById('viz-type').value = c.type;
+  document.getElementById('viz-title').value = c.title;
+  document.getElementById('viz-theme').value = c.theme || 'default';
+  vizState.labels = [...c.labels];
+  vizState.series = JSON.parse(JSON.stringify(c.series));
+  rebuildVizTable();
+  renderVizChart();
+  toast(`"${c.title}" loaded ✓`, 'ok');
+}
+
+function deleteSavedViz(id) {
+  const ch = getCh();
+  if (!ch?.vizCharts) return;
+  ch.vizCharts = ch.vizCharts.filter(v => v.id !== id);
+  save(); renderVizSavedList();
+  toast('Chart deleted', '');
+}
+
+async function aiGenerateViz() {
+  const prov = settings.aiProvider || 'gemini';
+  if (prov === 'gemini' && !settings.apiKeys?.length) { openSettings(); return; }
+  if (prov === 'openrouter' && !settings.orApiKeys?.length) { openSettings(); return; }
+  const ctx = getChapterContext();
+  const prompt = `Based on these chapter notes, suggest ONE insightful visualization (chart/graph) that would help a student understand the content better.
+Return ONLY a JSON object like:
+{"title":"Chart Title","type":"bar","labels":["A","B","C"],"series":[{"name":"Series","values":[10,20,30]}],"explanation":"Why this chart helps"}
+Chart types: bar, line, pie, doughnut, radar, polarArea
+Labels should be short (1-4 words). Values must be numbers. Max 8 labels.
+No markdown, no extra text.
+
+${ctx}`;
+
+  toast('🤖 AI is generating a chart…', '');
+  try {
+    const resp = prov === 'openrouter'
+      ? await callOpenRouter(prompt, 'You are a data visualization expert for students.')
+      : await callGemini(prompt, 'You are a data visualization expert for students.');
+    const clean = resp.replace(/```json|```/g, '').trim();
+    const obj = JSON.parse(clean);
+    if (!obj.labels || !obj.series) throw new Error('Bad format');
+
+    document.getElementById('viz-type').value = obj.type || 'bar';
+    document.getElementById('viz-title').value = obj.title || 'AI Chart';
+    vizState.labels = obj.labels;
+    vizState.series = obj.series.map((s, i) => ({
+      name: s.name || 'Series',
+      color: VIZ_THEMES.default[i % VIZ_THEMES.default.length],
+      values: s.values.map(Number)
+    }));
+    rebuildVizTable();
+    renderVizChart();
+    if (obj.explanation) toast(`📊 ${obj.explanation}`, 'ok');
+    else toast('Chart generated! ✓', 'ok');
+  } catch (e) {
+    toast('Could not generate chart: ' + e.message, 'err');
   }
 }
 
