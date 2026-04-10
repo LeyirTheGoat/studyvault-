@@ -1337,6 +1337,32 @@ mark.hl { background: rgba(245,166,35,0.3); color: var(--text); border-radius: 2
     <hr class="m-divider">
 
     <div class="settings-section">
+      <div class="settings-section-title">🔗 GitHub Gist Sync</div>
+      <div style="font-size:0.76rem;color:var(--text-muted);margin-bottom:12px;line-height:1.6">
+        Lưu data lên GitHub Gist (private) để đồng bộ giữa các thiết bị. Dữ liệu tự động push sau mỗi lần lưu.
+      </div>
+      <div class="m-field">
+        <label>GitHub Personal Access Token <span style="color:var(--accent);cursor:pointer;font-weight:400;text-transform:none;letter-spacing:0" onclick="openGistHelp()">→ Tạo token tại đây</span></label>
+        <input type="password" id="gist-token-input" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx" autocomplete="off"
+          style="width:100%;padding:9px 11px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-family:'DM Mono',monospace;font-size:0.8rem;outline:none">
+        <div style="font-size:0.7rem;color:var(--text-muted);margin-top:4px">Chỉ cần tick scope <strong style="color:var(--text-soft)">gist</strong> khi tạo token.</div>
+      </div>
+      <div class="m-field">
+        <label>Gist ID <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--text-muted)">(tự điền sau lần push đầu tiên)</span></label>
+        <input type="text" id="gist-id-input" placeholder="Để trống — tự tạo khi Push lần đầu"
+          style="width:100%;padding:9px 11px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-family:'DM Mono',monospace;font-size:0.8rem;outline:none">
+      </div>
+      <div class="btn-row" style="margin-bottom:10px">
+        <button class="btn-primary" onclick="saveGistSettings()">💾 Lưu cài đặt</button>
+        <button class="btn-sec" onclick="pushToGist()">⬆ Push lên Gist</button>
+        <button class="btn-sec" onclick="pullFromGist()">⬇ Pull từ Gist</button>
+      </div>
+      <div id="gist-status" style="font-size:0.76rem;color:var(--text-muted);min-height:18px"></div>
+    </div>
+
+    <hr class="m-divider">
+
+    <div class="settings-section">
       <div class="settings-section-title">💾 Storage</div>
       <div style="font-size:0.78rem;color:var(--text-muted);margin-bottom:10px" id="storage-info">Calculating…</div>
       <div class="btn-row">
@@ -1431,7 +1457,8 @@ const ICONS  = ['📚','💻','🔬','📐','🌍','⚗️','🧠','📖','🎨'
 
 /* ───── State ───── */
 let db = { years: [] };
-let settings = { apiKeys:[], aiModel:'gemini-3-flash', ttsLang:'vi-VN', ttsVoice:'', ttsRate:1, orApiKeys:[], orModel:'meta-llama/llama-3.3-70b-instruct:free', aiProvider:'gemini' };
+let settings = { apiKeys:[], aiModel:'gemini-3-flash', ttsLang:'vi-VN', ttsVoice:'', ttsRate:1, orApiKeys:[], orModel:'meta-llama/llama-3.3-70b-instruct:free', aiProvider:'gemini', gistToken:'', gistId:'' };
+let gistSyncTimer = null;
 let cur  = null;
 let curSubjMat = null; // { yId, sId, sjId }
 let tab  = 'notes';
@@ -1531,6 +1558,11 @@ function save() {
   idbSet('data','main', db).catch(() => {
     try { localStorage.setItem('studyvault_v1', JSON.stringify(db)); } catch(e){}
   });
+  // Debounce gist sync — push 4s after last save
+  if (settings.gistToken) {
+    clearTimeout(gistSyncTimer);
+    gistSyncTimer = setTimeout(() => pushToGist(), 4000);
+  }
 }
 
 function saveSettings() {
@@ -1574,9 +1606,117 @@ function getCh(yId,sId,sjId,cId) {
   return getSj(yId??y,sId??s,sjId??sj)?.chapters?.find(c2=>c2.id===(cId??c));
 }
 
+/* ───────────────────────────────────────────────────────────
+   GITHUB GIST SYNC
+   ─────────────────────────────────────────────────────────── */
+
+function gistHeaders() {
+  return {
+    'Authorization': `token ${settings.gistToken}`,
+    'Accept': 'application/vnd.github+json',
+    'Content-Type': 'application/json'
+  };
+}
+
+function setGistStatus(msg, type) {
+  const el = document.getElementById('gist-status');
+  if (!el) return;
+  el.textContent = msg;
+  el.style.color = type === 'ok' ? 'var(--green)' : type === 'err' ? 'var(--red)' : 'var(--text-muted)';
+}
+
+async function pushToGist(silent) {
+  if (!settings.gistToken) { if (!silent) toast('Chưa nhập GitHub Token!', 'err'); return; }
+  if (!silent) setGistStatus('⬆ Đang đồng bộ lên Gist…', '');
+  try {
+    const payload = JSON.stringify({ ...db, _syncedAt: new Date().toISOString() }, null, 2);
+    const body = { description: 'StudyVault backup', public: false, files: { 'studyvault.json': { content: payload } } };
+
+    let resp;
+    if (settings.gistId) {
+      resp = await fetch(`https://api.github.com/gists/${settings.gistId}`, {
+        method: 'PATCH', headers: gistHeaders(), body: JSON.stringify(body)
+      });
+    } else {
+      resp = await fetch('https://api.github.com/gists', {
+        method: 'POST', headers: gistHeaders(), body: JSON.stringify(body)
+      });
+    }
+    if (!resp.ok) throw new Error(`GitHub API lỗi ${resp.status}`);
+    const data = await resp.json();
+    if (!settings.gistId) {
+      settings.gistId = data.id;
+      saveSettings();
+      const el = document.getElementById('gist-id-input');
+      if (el) el.value = settings.gistId;
+    }
+    const now = new Date().toLocaleTimeString('vi-VN');
+    setGistStatus(`✓ Đã đồng bộ lúc ${now}`, 'ok');
+    if (!silent) toast('Đã lưu lên GitHub Gist ✓', 'ok');
+  } catch(e) {
+    setGistStatus(`✗ Lỗi: ${e.message}`, 'err');
+    if (!silent) toast('Gist sync thất bại: ' + e.message, 'err');
+  }
+}
+
+async function pullFromGist(silent) {
+  if (!settings.gistToken || !settings.gistId) {
+    if (!silent) toast('Cần nhập Token và Gist ID trước!', 'err');
+    return;
+  }
+  if (!silent) setGistStatus('⬇ Đang tải dữ liệu từ Gist…', '');
+  try {
+    const resp = await fetch(`https://api.github.com/gists/${settings.gistId}`, { headers: gistHeaders() });
+    if (!resp.ok) throw new Error(`GitHub API lỗi ${resp.status}`);
+    const data = await resp.json();
+    const content = data.files?.['studyvault.json']?.content;
+    if (!content) throw new Error('Không tìm thấy file studyvault.json trong Gist');
+    const remote = JSON.parse(content);
+    if (!remote.years) throw new Error('Dữ liệu không hợp lệ');
+
+    // Compare timestamps — pick newer
+    const remoteTime = remote._syncedAt ? new Date(remote._syncedAt) : new Date(0);
+    const localTime  = db._syncedAt     ? new Date(db._syncedAt)     : new Date(0);
+
+    if (remoteTime > localTime) {
+      db = remote;
+      await idbSet('data', 'main', db);
+      renderNav(); renderDash(); showDash();
+      const now = new Date().toLocaleTimeString('vi-VN');
+      setGistStatus(`✓ Đã tải dữ liệu mới nhất lúc ${now}`, 'ok');
+      if (!silent) toast('Đã tải dữ liệu từ Gist ✓', 'ok');
+    } else {
+      setGistStatus('✓ Dữ liệu local đang là mới nhất', 'ok');
+      if (!silent) toast('Dữ liệu local đang mới hơn — không cần tải về', 'ok');
+    }
+  } catch(e) {
+    setGistStatus(`✗ Lỗi: ${e.message}`, 'err');
+    if (!silent) toast('Pull từ Gist thất bại: ' + e.message, 'err');
+  }
+}
+
+function saveGistSettings() {
+  const token = document.getElementById('gist-token-input')?.value?.trim();
+  const gistId = document.getElementById('gist-id-input')?.value?.trim();
+  if (!token) { toast('Nhập GitHub Token trước!', 'err'); return; }
+  settings.gistToken = token;
+  settings.gistId = gistId || '';
+  saveSettings();
+  toast('Đã lưu cài đặt Gist ✓', 'ok');
+  setGistStatus('Đã lưu. Nhấn Push để đồng bộ ngay.', '');
+}
+
+function openGistHelp() {
+  window.open('https://github.com/settings/tokens/new?description=StudyVault+Sync&scopes=gist', '_blank');
+}
+
 /* ───── Boot ───── */
 async function init() {
   await load();
+  // Auto-pull from Gist on startup if configured
+  if (settings.gistToken && settings.gistId) {
+    pullFromGist(true); // silent — runs in background
+  }
   renderNav(); renderDash();
   const ed = document.getElementById('editor');
   ed.addEventListener('input', onEdit);
@@ -3009,6 +3149,14 @@ function openSettings() {
   populateTTSVoices();
   applySettings();
   updateStorageInfo();
+  // Populate Gist fields
+  const tokenEl = document.getElementById('gist-token-input');
+  const idEl = document.getElementById('gist-id-input');
+  if (tokenEl) tokenEl.value = settings.gistToken || '';
+  if (idEl) idEl.value = settings.gistId || '';
+  if (settings.gistToken) {
+    setGistStatus(settings.gistId ? '✓ Đã cấu hình — tự động sync khi lưu' : 'Token đã lưu — chưa có Gist ID', settings.gistId ? 'ok' : '');
+  }
   document.getElementById('settings-overlay').classList.add('open');
 }
 function closeSettings() { document.getElementById('settings-overlay').classList.remove('open'); }
