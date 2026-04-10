@@ -689,8 +689,30 @@ mark.hl { background: rgba(245,166,35,0.3); color: var(--text); border-radius: 2
   #sidebar { display: none; }
   .stats-row { grid-template-columns: repeat(2,1fr); }
   .fc-panel, .quiz-panel, .materials-panel, .ai-panel { padding: 16px; }
-  #dashboard { padding: 20px; }
+  #dashboard { padding: 20px 16px 80px; }
+  #chapter-view .ch-content { padding-bottom: 64px; }
+  #mobile-bottom-bar { display: flex; }
 }
+/* ===================== MOBILE BOTTOM BAR ===================== */
+#mobile-bottom-bar {
+  display: none;
+  position: fixed; bottom: 0; left: 0; right: 0; z-index: 900;
+  background: var(--surface); border-top: 1px solid var(--border);
+  padding: 8px 16px 12px;
+  gap: 8px; justify-content: space-around; align-items: center;
+  box-shadow: 0 -4px 20px rgba(0,0,0,0.4);
+}
+#mobile-bottom-bar button {
+  flex: 1; padding: 8px 4px;
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); color: var(--text-soft);
+  font-family: 'DM Sans', sans-serif; font-size: 0.7rem;
+  cursor: pointer; transition: var(--t);
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+}
+#mobile-bottom-bar button:hover { background: var(--card-hover); color: var(--text); }
+#mobile-bottom-bar button span.mb-icon { font-size: 1.1rem; }
+#mobile-bottom-bar button span.mb-label { font-size: 0.62rem; color: var(--text-muted); }
 </style>
 </head>
 <body>
@@ -717,7 +739,30 @@ mark.hl { background: rgba(245,166,35,0.3); color: var(--text); border-radius: 2
   </div>
 </aside>
 
-<!-- ==================== MAIN ==================== -->
+<!-- ==================== MOBILE BOTTOM BAR ==================== -->
+<div id="mobile-bottom-bar">
+  <button onclick="openModal('year')">
+    <span class="mb-icon">＋</span>
+    <span class="mb-label">Add Year</span>
+  </button>
+  <button onclick="openSearch()">
+    <span class="mb-icon">🔍</span>
+    <span class="mb-label">Search</span>
+  </button>
+  <button onclick="exportData()">
+    <span class="mb-icon">⬇</span>
+    <span class="mb-label">Export</span>
+  </button>
+  <button onclick="document.getElementById('import-file-mobile').click()">
+    <span class="mb-icon">⬆</span>
+    <span class="mb-label">Import</span>
+  </button>
+  <button onclick="openSettings()">
+    <span class="mb-icon">⚙️</span>
+    <span class="mb-label">Settings</span>
+  </button>
+  <input type="file" id="import-file-mobile" accept=".json" onchange="importData(event)" style="display:none">
+</div>
 <main id="main">
 
   <!-- DASHBOARD -->
