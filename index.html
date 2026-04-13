@@ -692,6 +692,35 @@ mark.hl { background: rgba(245,166,35,0.3); color: var(--text); border-radius: 2
   #dashboard { padding: 20px 16px 80px; }
   #chapter-view .ch-content { padding-bottom: 64px; }
   #mobile-bottom-bar { display: flex; }
+  /* Mobile sidebar overlay */
+  #sidebar.mobile-open {
+    display: flex !important;
+    position: fixed; inset: 0 0 0 0; z-index: 950;
+    width: 85vw; max-width: 320px;
+    box-shadow: 4px 0 40px rgba(0,0,0,0.7);
+    animation: slideInSidebar 0.22s ease;
+  }
+  @keyframes slideInSidebar { from { transform: translateX(-100%); } to { transform: translateX(0); } }
+  /* Overlay backdrop when sidebar is open */
+  #mobile-sidebar-backdrop {
+    display: none;
+    position: fixed; inset: 0; z-index: 940;
+    background: rgba(0,0,0,0.55); backdrop-filter: blur(2px);
+  }
+  #mobile-sidebar-backdrop.open { display: block; }
+  /* Make dashboard topbar stack on mobile */
+  .dash-topbar { flex-direction: column; align-items: flex-start; gap: 14px; }
+  .pomodoro-widget { width: 100%; justify-content: space-between; }
+  /* Tabs scroll without text truncation */
+  .ch-tabs { gap: 0; }
+  .tab-btn { font-size: 0.73rem; padding: 10px 10px; }
+  /* Editor padding */
+  #editor { padding: 16px; }
+  .editor-toolbar { padding: 6px 10px; gap: 2px; }
+  /* Breadcrumb smaller */
+  .breadcrumb { font-size: 0.68rem; }
+  /* Chapter topbar */
+  .ch-topbar { padding: 8px 12px; flex-wrap: wrap; gap: 6px; }
 }
 /* ===================== MOBILE BOTTOM BAR ===================== */
 #mobile-bottom-bar {
@@ -739,11 +768,14 @@ mark.hl { background: rgba(245,166,35,0.3); color: var(--text); border-radius: 2
   </div>
 </aside>
 
+<!-- Mobile sidebar backdrop -->
+<div id="mobile-sidebar-backdrop" onclick="closeMobileSidebar()"></div>
+
 <!-- ==================== MOBILE BOTTOM BAR ==================== -->
 <div id="mobile-bottom-bar">
-  <button onclick="openModal('year')">
-    <span class="mb-icon">＋</span>
-    <span class="mb-label">Add Year</span>
+  <button onclick="toggleMobileSidebar()">
+    <span class="mb-icon">☰</span>
+    <span class="mb-label">Menu</span>
   </button>
   <button onclick="openSearch()">
     <span class="mb-icon">🔍</span>
@@ -2003,6 +2035,7 @@ function delSubjMat(id) {
 /* ───── Open Chapter ───── */
 function openCh(yId,sId,sjId,cId) {
   stopTTS(); cur={yId,sId,sjId,cId};
+  closeMobileSidebar();
   const ch=getCh(yId,sId,sjId,cId), sj=getSj(yId,sId,sjId), s=getS(yId,sId), y=getY(yId);
   if(!ch) return;
   if(!ch.materials) ch.materials=[];
@@ -2105,70 +2138,121 @@ function onPaste(e) {
     }
   }
 
-  // 2. Table paste from HTML clipboard (Excel, Google Sheets, Word, web pages)
+  // 2. Rich HTML paste (Excel table, Word, web pages, etc.)
   const htmlItem = Array.from(items).find(i=>i.type==='text/html');
   if(htmlItem) {
     htmlItem.getAsString(raw=>{
-      // Parse the clipboard HTML
       const parser=new DOMParser();
       const doc=parser.parseFromString(raw,'text/html');
-      const table=doc.querySelector('table');
-      if(!table) return; // no table → let browser handle default paste
+      const body=doc.body;
 
-      e.preventDefault();
-
-      // Sanitize: build a clean <table> preserving structure, stripping inline noise
-      const cleanTable=document.createElement('table');
-      const rows=table.querySelectorAll('tr');
-      rows.forEach((srcRow,rowIdx)=>{
-        const tr=document.createElement('tr');
-        const cells=srcRow.querySelectorAll('td,th');
-        cells.forEach(srcCell=>{
-          const isHeader=srcCell.tagName==='TH'||(rowIdx===0&&table.querySelectorAll('thead tr').length>0);
-          const td=document.createElement(isHeader?'th':'td');
-          // Colspan / rowspan
-          if(srcCell.colSpan>1) td.colSpan=srcCell.colSpan;
-          if(srcCell.rowSpan>1) td.rowSpan=srcCell.rowSpan;
-          // Get text content (strip complex nested styles but keep text)
-          td.textContent=srcCell.innerText||srcCell.textContent||'';
-          tr.appendChild(td);
+      // Check if there's a table
+      const table=body.querySelector('table');
+      if(table) {
+        e.preventDefault();
+        const cleanTable=document.createElement('table');
+        const rows=table.querySelectorAll('tr');
+        rows.forEach((srcRow,rowIdx)=>{
+          const tr=document.createElement('tr');
+          const cells=srcRow.querySelectorAll('td,th');
+          cells.forEach(srcCell=>{
+            const isHeader=srcCell.tagName==='TH'||(rowIdx===0&&table.querySelectorAll('thead tr').length>0);
+            const td=document.createElement(isHeader?'th':'td');
+            if(srcCell.colSpan>1) td.colSpan=srcCell.colSpan;
+            if(srcCell.rowSpan>1) td.rowSpan=srcCell.rowSpan;
+            td.textContent=srcCell.innerText||srcCell.textContent||'';
+            tr.appendChild(td);
+          });
+          if(tr.children.length) cleanTable.appendChild(tr);
         });
-        if(tr.children.length) cleanTable.appendChild(tr);
-      });
+        if(cleanTable.rows.length) {
+          const sel=window.getSelection();
+          if(!sel||!sel.rangeCount){ document.getElementById('editor').appendChild(cleanTable); onEdit(); return; }
+          const range=sel.getRangeAt(0);
+          range.deleteContents();
+          const before=document.createElement('p'); before.innerHTML='&nbsp;';
+          const after=document.createElement('p'); after.innerHTML='&nbsp;';
+          const frag=document.createDocumentFragment();
+          frag.appendChild(before); frag.appendChild(cleanTable); frag.appendChild(after);
+          range.insertNode(frag);
+          const newRange=document.createRange();
+          newRange.setStart(after,0); newRange.collapse(true);
+          sel.removeAllRanges(); sel.addRange(newRange);
+          onEdit(); toast('📋 Table pasted!','ok');
+        }
+        return;
+      }
 
-      if(!cleanTable.rows.length) return;
-
-      // Insert into editor at caret position
+      // Generic rich HTML — rebuild clean HTML preserving block structure, strip all inline styles
+      e.preventDefault();
+      const cleanFrag = sanitizeHTMLForEditor(body);
       const sel=window.getSelection();
-      if(!sel||!sel.rangeCount){ document.getElementById('editor').appendChild(cleanTable); onEdit(); return; }
+      if(!sel||!sel.rangeCount){ document.getElementById('editor').appendChild(cleanFrag); onEdit(); return; }
       const range=sel.getRangeAt(0);
       range.deleteContents();
-
-      // Wrap in a paragraph before and after for easier editing
-      const before=document.createElement('p');
-      before.innerHTML='&nbsp;';
-      const after=document.createElement('p');
-      after.innerHTML='&nbsp;';
-
-      const frag=document.createDocumentFragment();
-      frag.appendChild(before);
-      frag.appendChild(cleanTable);
-      frag.appendChild(after);
-      range.insertNode(frag);
-
-      // Move caret to the paragraph after the table
-      const newRange=document.createRange();
-      newRange.setStart(after,0);
-      newRange.collapse(true);
-      sel.removeAllRanges();
-      sel.addRange(newRange);
-
+      range.insertNode(cleanFrag);
+      // Move caret to end of insertion
+      range.collapse(false);
+      sel.removeAllRanges(); sel.addRange(range);
       onEdit();
-      toast('📋 Table pasted!','ok');
     });
     return;
   }
+
+  // 3. Plain text paste — convert to paragraphs so it respects editor format
+  const textItem = Array.from(items).find(i=>i.type==='text/plain');
+  if(textItem) {
+    e.preventDefault();
+    textItem.getAsString(txt=>{
+      const lines = txt.split('\n');
+      const html = lines.map(l=>l.trim()===''?'<p><br></p>':`<p>${l.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</p>`).join('');
+      document.execCommand('insertHTML',false,html);
+      onEdit();
+    });
+  }
 }
+
+function sanitizeHTMLForEditor(el) {
+  const ALLOWED_BLOCK = new Set(['P','DIV','H1','H2','H3','H4','H5','H6','BLOCKQUOTE','PRE','UL','OL','LI','TABLE','THEAD','TBODY','TR','TH','TD','HR','BR']);
+  const ALLOWED_INLINE = new Set(['STRONG','B','EM','I','U','S','STRIKE','CODE','MARK','SUP','SUB','SPAN','A']);
+
+  function walk(src, out) {
+    for(const node of Array.from(src.childNodes)) {
+      if(node.nodeType===3) { // text node
+        if(node.textContent) out.appendChild(document.createTextNode(node.textContent));
+        continue;
+      }
+      if(node.nodeType!==1) continue;
+      const tag=node.tagName;
+      if(ALLOWED_BLOCK.has(tag)) {
+        let el;
+        if(tag==='H1'||tag==='H2') el=document.createElement('h2');
+        else if(tag==='H3'||tag==='H4'||tag==='H5'||tag==='H6') el=document.createElement('h3');
+        else el=document.createElement(tag.toLowerCase());
+        // Preserve colspan/rowspan for table cells
+        if((tag==='TD'||tag==='TH')&&node.colSpan>1) el.colSpan=node.colSpan;
+        if((tag==='TD'||tag==='TH')&&node.rowSpan>1) el.rowSpan=node.rowSpan;
+        walk(node, el);
+        out.appendChild(el);
+      } else if(ALLOWED_INLINE.has(tag)) {
+        let el;
+        if(tag==='B') el=document.createElement('strong');
+        else if(tag==='I') el=document.createElement('em');
+        else if(tag==='STRIKE') el=document.createElement('s');
+        else if(tag==='SPAN'||tag==='A') el=document.createElement('span'); // strip links/spans but keep text
+        else el=document.createElement(tag.toLowerCase());
+        walk(node, el);
+        out.appendChild(el);
+      } else {
+        // Unknown tag — recurse into children, don't wrap
+        walk(node, out);
+      }
+    }
+  }
+
+  const frag=document.createDocumentFragment();
+  walk(el, frag);
+  return frag;
 function resizeLastImage() {
   setTimeout(()=>{
     const imgs=document.getElementById('editor').querySelectorAll('img');
@@ -3172,17 +3256,101 @@ function clearAIChat() { aiMessages=[]; document.getElementById('ai-chat').inner
 function aiInputKey(e) { if(e.key==='Enter'&&!e.shiftKey){ e.preventDefault(); sendAIMessage(); } }
 function autoResizeAIInput(el) { el.style.height='auto'; el.style.height=Math.min(el.scrollHeight,120)+'px'; }
 function markdownToHTML(text) {
-  return text
-    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
-    .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
-    .replace(/\*(.+?)\*/g,'<em>$1</em>')
-    .replace(/`(.+?)`/g,'<code>$1</code>')
-    .replace(/#{3}\s([^\n]+)/g,'<strong>$1</strong>')
-    .replace(/#{2}\s([^\n]+)/g,'<strong>$1</strong>')
-    .replace(/#{1}\s([^\n]+)/g,'<strong>$1</strong>')
-    .replace(/\n\n/g,'</p><p>')
-    .replace(/\n/g,'<br>')
-    .replace(/^•\s/gm,'• ');
+  // Escape HTML in a string (helper)
+  function esc(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+  // Process code blocks first (``` ... ```) before any other substitution
+  const codeBlocks = [];
+  text = text.replace(/```(\w*)\n?([\s\S]*?)```/g, (_, lang, code) => {
+    const idx = codeBlocks.length;
+    codeBlocks.push(`<pre><code>${esc(code.trim())}</code></pre>`);
+    return `\x00CODE${idx}\x00`;
+  });
+
+  const lines = text.split('\n');
+  const out = [];
+  let inUL = false, inOL = false;
+
+  function closeList() {
+    if (inUL) { out.push('</ul>'); inUL = false; }
+    if (inOL) { out.push('</ol>'); inOL = false; }
+  }
+
+  for (let i = 0; i < lines.length; i++) {
+    const raw = lines[i];
+    const line = raw.trimEnd();
+
+    // Code block placeholder
+    if (/^\x00CODE\d+\x00$/.test(line.trim())) {
+      closeList();
+      const idx = parseInt(line.trim().match(/\d+/)[0]);
+      out.push(codeBlocks[idx]);
+      continue;
+    }
+
+    // Headings
+    const h3 = line.match(/^### (.+)/);
+    const h2 = line.match(/^## (.+)/);
+    const h1 = line.match(/^# (.+)/);
+    if (h1) { closeList(); out.push(`<h3 style="font-family:'Playfair Display',serif;font-size:1.3rem;margin:14px 0 6px">${inlineMarkdown(esc(h1[1]))}</h3>`); continue; }
+    if (h2) { closeList(); out.push(`<h4 style="font-size:1.05rem;font-weight:600;margin:12px 0 5px;color:var(--accent)">${inlineMarkdown(esc(h2[1]))}</h4>`); continue; }
+    if (h3) { closeList(); out.push(`<h5 style="font-size:0.95rem;font-weight:600;margin:10px 0 4px;color:var(--text-soft)">${inlineMarkdown(esc(h3[1]))}</h5>`); continue; }
+
+    // Horizontal rule
+    if (/^(\*\*\*|---|___)\s*$/.test(line)) { closeList(); out.push('<hr style="border:none;border-top:1px solid var(--border);margin:12px 0">'); continue; }
+
+    // Blockquote
+    const bq = line.match(/^> (.+)/);
+    if (bq) { closeList(); out.push(`<blockquote style="border-left:3px solid var(--accent);padding-left:12px;color:var(--text-soft);margin:8px 0;font-style:italic">${inlineMarkdown(esc(bq[1]))}</blockquote>`); continue; }
+
+    // Unordered list
+    const ul = line.match(/^(\s*)([-*+]) (.+)/);
+    if (ul) {
+      if (inOL) { out.push('</ol>'); inOL = false; }
+      if (!inUL) { out.push('<ul style="margin:6px 0 6px 20px;padding:0">'); inUL = true; }
+      out.push(`<li style="margin-bottom:3px">${inlineMarkdown(esc(ul[3]))}</li>`);
+      continue;
+    }
+
+    // Ordered list
+    const ol = line.match(/^\s*(\d+)\. (.+)/);
+    if (ol) {
+      if (inUL) { out.push('</ul>'); inUL = false; }
+      if (!inOL) { out.push('<ol style="margin:6px 0 6px 20px;padding:0">'); inOL = true; }
+      out.push(`<li style="margin-bottom:3px">${inlineMarkdown(esc(ol[2]))}</li>`);
+      continue;
+    }
+
+    // Empty line
+    if (line.trim() === '') {
+      closeList();
+      out.push('<br>');
+      continue;
+    }
+
+    // Regular paragraph line
+    closeList();
+    out.push(`<p style="margin:0 0 4px">${inlineMarkdown(esc(line))}</p>`);
+  }
+
+  closeList();
+  return out.join('\n');
+}
+
+function inlineMarkdown(text) {
+  // Bold+italic
+  text = text.replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>');
+  // Bold
+  text = text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  text = text.replace(/__(.+?)__/g, '<strong>$1</strong>');
+  // Italic
+  text = text.replace(/\*([^*]+)\*/g, '<em>$1</em>');
+  text = text.replace(/_([^_]+)_/g, '<em>$1</em>');
+  // Inline code
+  text = text.replace(/`([^`]+)`/g, '<code style="font-family:\'DM Mono\',monospace;background:var(--card);padding:1px 5px;border-radius:3px;font-size:0.85em;color:var(--accent2)">$1</code>');
+  // Strikethrough
+  text = text.replace(/~~(.+?)~~/g, '<s>$1</s>');
+  return text;
 }
 
 /* ───────────────────────────────────────────────────────────
@@ -4264,6 +4432,21 @@ ${ctx}`;
   } catch (e) {
     toast('Could not generate graph: ' + e.message, 'err');
   }
+}
+
+/* ───────────────────────────────────────────────────────────
+   MOBILE SIDEBAR
+   ─────────────────────────────────────────────────────────── */
+function toggleMobileSidebar() {
+  const sb = document.getElementById('sidebar');
+  const bd = document.getElementById('mobile-sidebar-backdrop');
+  const isOpen = sb.classList.contains('mobile-open');
+  if(isOpen) { closeMobileSidebar(); }
+  else { sb.classList.add('mobile-open'); bd.classList.add('open'); }
+}
+function closeMobileSidebar() {
+  document.getElementById('sidebar').classList.remove('mobile-open');
+  document.getElementById('mobile-sidebar-backdrop').classList.remove('open');
 }
 
 /* ───── Start ───── */
